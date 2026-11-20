@@ -135,7 +135,7 @@ write('telegram-trace.html', page('Telegram agent trace', `
   </div>
   <noscript><p>Enable JavaScript to inspect the example spans.</p></noscript>
   ${telegramView ? '<p class="trace-owner"><a href="' + escape(telegramView.href) + '" rel="noreferrer">Open private RhysBot traces</a></p>' : ''}
-`, { head: '<link rel="stylesheet" href="/poppy/telegram-demo.css?v=poppy"><script type="module" src="/poppy/telegram-demo.mjs"></script>',
+`, { head: '<link rel="stylesheet" href="/poppy/telegram-demo.css?v=inspector-light"><script type="module" src="/poppy/telegram-demo.mjs"></script>',
   bodyClass: 'site-report poppy-trace' }));
 
 if (ownerOrigin) {
