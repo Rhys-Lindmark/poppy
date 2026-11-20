@@ -54,7 +54,7 @@ function renderBlocks(markdown) {
       if (!label) throw new Error('Unsupported cookbook code language ' + language);
       blocks.push('<div class="cookbook-code"><div class="cookbook-code-bar"><span>' + label + '</span>' +
         '<button type="button" data-copy hidden aria-label="Copy ' + label + '">Copy</button></div>' +
-        '<pre tabindex="0"><code>' + escape(code.replace(/\n$/, '')) + '</code></pre></div>');
+        '<pre tabindex="0" aria-label="' + label + '"><code>' + escape(code.replace(/\n$/, '')) + '</code></pre></div>');
     } else if (prose.startsWith('## ')) {
       const label = prose.slice(3);
       const id = anchor(label);
@@ -88,13 +88,14 @@ function readGuide(repo, guide) {
 function article(guide) {
   const items = guide.outline.map(({ id, label }) =>
     '<li><a href="#' + id + '">' + escape(label) + '</a></li>').join('');
-  return '<div class="cookbook-title cookbook-entry-title"><p class="cookbook-breadcrumb"><a href="./">Cookbooks</a>' +
-    '<span> / </span>' + escape(guide.topic) + '</p><h1>' + escape(guide.title) + '</h1>' +
+  return '<div class="cookbook-title cookbook-entry-title"><nav class="cookbook-breadcrumb" aria-label="Breadcrumb">' +
+    '<a href="./">Cookbooks</a><span aria-hidden="true">/</span><span>' + escape(guide.topic) + '</span></nav>' +
+    '<h1>' + escape(guide.title) + '</h1>' +
     '<p class="cookbook-intro">' + inline(guide.description) + '</p>' +
     '<p class="cookbook-source"><a href="' + guide.slug + '.md">Markdown</a>' +
     '<a href="' + repository + 'docs/cookbooks/' + guide.slug + '.md">View on GitHub</a></p></div>' +
     '<div class="cookbook-layout"><nav class="cookbook-outline" aria-label="On this page">' +
-    '<p>On this page</p><ul>' + items + '</ul></nav><article class="cookbook-content">' +
+    '<details open><summary>On this page</summary><ul>' + items + '</ul></details></nav><article class="cookbook-content">' +
     guide.html + '</article></div><p class="cookbook-feedback" role="status"></p>';
 }
 
@@ -119,8 +120,10 @@ function proposalGroups(repo) {
 function index(articles, groups) {
   const topics = groups.map(({ title }) =>
     '<option value="' + anchor(title) + '">' + escape(title) + '</option>').join('');
-  const tutorials = articles.map(({ slug, title, topic }) =>
-    '<li><a href="' + slug + '.html">' + escape(title) + '</a><span>' + escape(topic) + '</span></li>').join('');
+  const [first, ...remaining] = articles;
+  const tutorials = remaining.map(({ slug, title, topic, description }) =>
+    '<li><div><h3><a href="' + slug + '.html">' + escape(title) + '</a></h3><p>' + inline(description) +
+    '</p></div><span>' + escape(topic) + '</span></li>').join('');
   const proposals = groups.map(({ title, entries }) =>
     '<div class="cookbook-group" data-proposal-group><h3 id="' + anchor(title) + '">' + escape(title) + '</h3>' +
     '<ul>' + entries.map(({ id, label, outcome }) => {
@@ -130,15 +133,19 @@ function index(articles, groups) {
         '</a>' : '<strong>' + escape(label) + '</strong>') + '</p> <p>' + escape(outcome) + '</p></li>';
     }).join('') + '</ul></div>').join('');
 
-  return '<div class="cookbook-title cookbook-catalog-title"><h1>Personal Agent Protocol cookbooks</h1><p class="cookbook-intro">' +
-    'Build a personal agent, connect a store, or test how they work together.</p>' +
+  return '<div class="cookbook-title cookbook-catalog-title"><h1>Poppy cookbooks</h1><p class="cookbook-intro">' +
+    'Runnable guides for the Personal Agent Protocol. Build an agent, connect a store, and test how they work together.</p>' +
     '<nav class="cookbook-source" aria-label="Cookbook resources">' +
     '<a href="#runnable-guides">Runnable guides</a><a href="#proposals">50 proposals</a>' +
     '<a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
     '<a href="' + source + '">GitHub</a></nav></div>' +
     '<div class="cookbook-content cookbook-catalog"><section aria-labelledby="runnable-guides">' +
-    '<h2 id="runnable-guides">Runnable guides <span>' + articles.length + '</span></h2><ul class="cookbook-guides">' + tutorials +
-    '</ul></section><section aria-labelledby="proposals"><h2 id="proposals">50 proposals</h2>' +
+    '<h2 id="runnable-guides">Runnable guides <span>' + articles.length + '</span></h2>' +
+    '<div class="cookbook-featured"><div><h3>' + escape(first.title) +
+    '</h3><p>' + inline(first.description) + '</p></div>' +
+    '<a class="cookbook-action" href="' + first.slug + '.html" aria-label="Read the guide to build a Personal Agent">Read the guide</a></div>' +
+    '<ul class="cookbook-guides">' + tutorials + '</ul></section>' +
+    '<section aria-labelledby="proposals"><h2 id="proposals">Cookbook proposals <span>50</span></h2>' +
     '<div class="cookbook-filter" data-filter hidden>' +
     '<div><label for="find-proposal">Search proposals</label>' +
     '<input id="find-proposal" type="search" placeholder="Search by task or capability" autocomplete="off"></div>' +
@@ -149,8 +156,8 @@ function index(articles, groups) {
 
 export function buildCookbooks({ repo, route, write, page }) {
   const articles = guides.map((guide) => readGuide(repo, guide));
-  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css">' +
-    '<script type="module" src="' + route + '/cookbooks.mjs"></script>';
+  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=reading-layout">' +
+    '<script type="module" src="' + route + '/cookbooks.mjs?v=reading-layout"></script>';
   const pageOptions = { head, bodyClass: 'cookbook-page', active: '/cookbooks/' };
   for (const guide of articles) {
     write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide), pageOptions));
