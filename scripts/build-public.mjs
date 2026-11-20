@@ -197,7 +197,7 @@ write('sponsors.html', page('Hackathon sponsors',
 write('sponsors.md', sponsors);
 
 for (const name of ['styles.css', 'tokens.css', 'branding.css', 'hermes-conformance.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
-  'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
+  'cookbook-cover.jpg', 'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +

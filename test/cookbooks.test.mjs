@@ -13,7 +13,10 @@ test('cookbooks render navigable articles with code examples and preserve the pr
   });
   const index = outputs.get('cookbooks/index.html');
   assert.equal([...index.matchAll(/<li data-proposal>/g)].length, 50);
+  assert.equal([...index.matchAll(/<li data-guide data-topic="[^"]+">/g)].length, 5);
   assert.match(index, /data-filter/);
+  assert.match(index, /placeholder="Search cookbooks"/);
+  assert.match(index, /cookbook-cover\.jpg/);
   assert.match(index, /class="cookbook-action" href="personal-agent\.html"/);
   assert.match(index, /sandbox\.printwithpoppy\.com/);
 
@@ -27,7 +30,9 @@ test('cookbooks render navigable articles with code examples and preserve the pr
     assert.match(html, /<article[^>]*>.*<h2 id="what-you-ll-build">/);
     assert.match(html, /<details open><summary>On this page<\/summary>/);
     assert.match(html, /data-copy/);
-    assert.doesNotMatch(html, /\x60{3}/);
+    assert.match(html, /data-copy-page hidden/);
+    assert.match(html, /aria-label="Browse guides"/);
+    assert.doesNotMatch(html.split('<template id="cookbook-markdown">')[0], /\x60{3}/);
     for (const [, anchor] of html.matchAll(/href="#([^"]+)"/g)) {
       assert.ok(html.includes('id="' + anchor + '"'), path + ' links to a missing section');
     }
