@@ -1,4 +1,4 @@
-import { papTool, readHermesEvents } from './hermes-events.mjs';
+import { papReadTool, papTool, readHermesEvents } from './hermes-events.mjs';
 import { createTelegramAccess } from './telegram-access.mjs';
 
 const runPattern = /^run_[A-Za-z0-9_-]{3,100}$/;
@@ -89,7 +89,8 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
       trace.stream = 'connected';
       await readHermesEvents(stream.body, run, (event, time) => {
         if (trace.tools.length < 100) trace.tools.push(event);
-        if (event.type === 'tool.completed' && event.tool === papTool && event.ok && time !== null && trace.completed.length < 8) {
+        if (event.type === 'tool.completed' && [papTool, papReadTool].includes(event.tool) &&
+            event.ok && time !== null && trace.completed.length < 8) {
           trace.completed.push(time);
         }
       });

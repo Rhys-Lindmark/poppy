@@ -1,4 +1,5 @@
 export const papTool = 'mcp__poppy_pap__prepare_commonplace_edition';
+export const papReadTool = 'mcp__poppy_pap__read_company_api';
 
 export async function readHermesEvents(body, run, observe) {
   const reader = body.pipeThrough(new TextDecoderStream()).getReader();

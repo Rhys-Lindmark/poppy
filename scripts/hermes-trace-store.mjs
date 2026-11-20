@@ -1,9 +1,29 @@
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { papTool } from '../src/hermes-events.mjs';
+import { papReadTool, papTool } from '../src/hermes-events.mjs';
+import { publicUrl } from '../src/poppy-https.mjs';
 
 const company = 'https://ai.rhyslindmark.com';
 const route = '/poppy/api/edition.json';
+const clientId = company + '/poppy/hermes-agent.json';
+
+function companyReceipt(proof) {
+  const origin = publicUrl(proof.company?.origin).origin;
+  const identifier = publicUrl(proof.company?.identifier);
+  if (identifier.search || !Array.isArray(proof.trace) || proof.trace.length > 40) return null;
+  const requests = proof.trace.map(({ method, host, path, status, signed, started_at, ended_at }) => {
+    if (method !== 'GET' || typeof host !== 'string' || !/^[a-z0-9.-]{1,254}$/.test(host) ||
+        typeof path !== 'string' || !path.startsWith('/') || path.length > 4096 || /[?#\u0000-\u0020]/.test(path) ||
+        !Number.isInteger(status) || status < 100 || status > 599 || typeof signed !== 'boolean') return null;
+    const timed = Number.isFinite(started_at) && Number.isFinite(ended_at) && ended_at >= started_at && ended_at - started_at <= 30;
+    return { method, host, path, status, signed, ...(timed && { started_at, ended_at }) };
+  });
+  if (requests.some((request) => !request)) return null;
+  const request = requests.findLast(({ signed }) => signed);
+  if (!request || request.status !== proof.status) return null;
+  return { version: '1.0', company: origin, audience: proof.company.identifier, client_id: clientId,
+    method: request.method, path: request.path, http_status: request.status, requests };
+}
 
 export function readPapReceipt(content) {
   try {
@@ -12,9 +32,10 @@ export function readPapReceipt(content) {
     const envelope = notice >= 0 ? wrapped.slice(notice + 2) : wrapped ?? content;
     const result = JSON.parse(envelope).result;
     const proof = typeof result === 'string' ? JSON.parse(result) : result;
+    if (proof?.protocol_version !== '1.0' || proof.client_id !== clientId) return null;
+    if (proof.company) return companyReceipt(proof);
     const request = proof?.signed_requests?.[0];
-    if (proof?.protocol_version !== '1.0' || proof.client_id !== company + '/poppy/hermes-agent.json' ||
-        proof.signed_requests.length !== 1 || request?.method !== 'GET' || request.path !== route || request.status !== 200) return null;
+    if (proof.signed_requests?.length !== 1 || request?.method !== 'GET' || request.path !== route || request.status !== 200) return null;
     const checks = proof.trace;
     const observed = [
       ['GET', '/.well-known/oauth-protected-resource', 404],
@@ -46,7 +67,7 @@ function openTelegramTrace(db, owner) {
       AND m.role = 'user' AND coalesce(m.active, 1) = 1
     ORDER BY m.id DESC LIMIT 5`);
   const events = db.prepare(`SELECT id, timestamp, role, tool_call_id, tool_name, length(content) AS characters,
-    finish_reason, substr(tool_calls, 1, 32769) AS calls, CASE WHEN tool_name = ? THEN substr(content, 1, 32769) END AS pap
+    finish_reason, substr(tool_calls, 1, 32769) AS calls, CASE WHEN tool_name IN (?, ?) THEN substr(content, 1, 65537) END AS pap
     FROM messages WHERE session_id = ? AND id > ? AND coalesce(active, 1) = 1
       AND id < coalesce((SELECT min(id) FROM messages WHERE session_id = ? AND id > ? AND role = 'user' AND coalesce(active, 1) = 1), 9223372036854775807)
       AND role IN ('assistant', 'tool') ORDER BY id LIMIT 120`);
@@ -55,7 +76,7 @@ function openTelegramTrace(db, owner) {
   return () => turns.all(owner, owner).map(({ id, session_id, timestamp, characters }) => {
     const tools = new Map();
     let reply = null;
-    for (const event of events.all(papTool, session_id, id, session_id, id)) {
+    for (const event of events.all(papTool, papReadTool, session_id, id, session_id, id)) {
       if (event.role === 'assistant') {
         if (event.calls) {
           let calls;
@@ -76,7 +97,7 @@ function openTelegramTrace(db, owner) {
         const name = toolName(event.tool_name);
         if (!name) continue;
         const key = event.tool_call_id || 'row-' + event.id;
-        const receipt = event.pap?.length <= 32768 ? readPapReceipt(event.pap) : null;
+        const receipt = event.pap?.length <= 65536 ? readPapReceipt(event.pap) : null;
         tools.set(key, { name, state: 'Result recorded', timestamp: tools.get(key)?.timestamp ?? event.timestamp, ended_at: event.timestamp,
           ...(receipt && { pap: receipt }) });
       }
@@ -88,20 +109,20 @@ function openTelegramTrace(db, owner) {
 export function openHermesTraceStore(path, telegramOwner) {
   const db = new DatabaseSync(path, { readOnly: true, timeout: 100 });
   const cursor = db.prepare('SELECT coalesce(max(id), 0) AS id FROM messages WHERE session_id = ?');
-  const entries = db.prepare(`SELECT id, role, tool_name, timestamp, substr(content, 1, 32769) AS content
-    FROM messages WHERE session_id = ? AND id > ? AND (role = 'user' OR (role = 'tool' AND tool_name = ?))
+  const entries = db.prepare(`SELECT id, role, tool_name, timestamp, substr(content, 1, 65537) AS content
+    FROM messages WHERE session_id = ? AND id > ? AND (role = 'user' OR (role = 'tool' AND tool_name IN (?, ?)))
     ORDER BY id LIMIT 25`);
   return {
     telegram: openTelegramTrace(db, telegramOwner),
     cursor: (session) => cursor.get(session).id,
     proof(session, after, fingerprint, completed) {
-      const rows = entries.all(session, after, papTool);
+      const rows = entries.all(session, after, papTool, papReadTool);
       const users = rows.filter(({ role }) => role === 'user');
       if (rows.length === 25 || users.length !== 1 || typeof users[0].content !== 'string' ||
           createHash('sha256').update(users[0].content).digest().join(',') !== fingerprint) return [];
       return completed.flatMap((time) => {
         const matches = rows.filter((row) => row.role === 'tool' && row.id > users[0].id && Math.abs(row.timestamp - time) < 2);
-        if (matches.length !== 1 || typeof matches[0].content !== 'string' || matches[0].content.length > 32768) return [];
+        if (matches.length !== 1 || typeof matches[0].content !== 'string' || matches[0].content.length > 65536) return [];
         const receipt = readPapReceipt(matches[0].content);
         return receipt ? [{ id: matches[0].id, receipt }] : [];
       });

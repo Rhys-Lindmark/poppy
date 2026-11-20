@@ -4,7 +4,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { companyOrigin, readProposal } from '../public/commonplace-agent.mjs';
-import { keyPair, now, randomId, requestUrl, signJwt, thumbprint, version } from '../src/protocol.mjs';
+import { thumbprint, version } from '../src/protocol.mjs';
+import { createPoppyClient, guestSession as createGuestSession } from '../src/poppy-client.mjs';
 
 const publicIdentity = companyOrigin + '/poppy/hermes-agent.json';
 const jwksUri = companyOrigin + '/poppy/hermes-jwks.json';
@@ -21,19 +22,7 @@ export function hermesIdentity(privateKey) {
 }
 
 export function guestSession({ root, audience, subject }) {
-  const iat = now();
-  const delegated = keyPair();
-  const sid = randomId();
-  const delegation = signJwt(root, 'poppy-delegation+jwt', {
-    iss: publicIdentity, cnf: { jwk: delegated.jwk }, iat, exp: iat + 600, jti: randomId(),
-  });
-  return (method, url) => ({
-    'Poppy-Session': signJwt(delegated, 'poppy-session+jwt', {
-      iss: publicIdentity, aud: audience, sub: subject, sid,
-      htm: method, htu: requestUrl(url), iat: now(), jti: randomId(),
-    }, { poppy_dlg: delegation }),
-    'Poppy-Version': version,
-  });
+  return createGuestSession({ root, clientId: publicIdentity, audience, subject });
 }
 
 export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fetch }) {
@@ -77,9 +66,25 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (process.argv[2] === '--identity') {
       console.log(JSON.stringify({ metadata: identity.metadata, jwks: identity.jwks }, null, 2));
     } else {
-      const result = await prepareGuestEdition({
-        identity, pairwiseKey: readFileSync(join(configuration, 'pap-pairwise.secret')),
-      });
+      const pairwiseKey = readFileSync(join(configuration, 'pap-pairwise.secret'));
+      const action = process.argv[2];
+      let result;
+      if (action === '--discover' || action === '--read') {
+        const chunks = [];
+        let length = 0;
+        for await (const chunk of process.stdin) {
+          length += chunk.length;
+          if (length > 16384) throw new Error('Poppy tool input is too large.');
+          chunks.push(chunk);
+        }
+        const { company, ...operation } = JSON.parse(Buffer.concat(chunks));
+        const client = createPoppyClient({ identity, pairwiseKey });
+        result = action === '--discover' ? await client.discover(company) : await client.read(company, operation);
+        result.client_id = identity.metadata.client_id;
+        result.protocol_version = version;
+      } else {
+        result = await prepareGuestEdition({ identity, pairwiseKey });
+      }
       console.log(JSON.stringify(result));
     }
   } catch (error) {

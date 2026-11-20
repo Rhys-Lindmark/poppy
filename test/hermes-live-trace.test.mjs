@@ -5,9 +5,29 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
-import { openHermesTraceStore } from '../scripts/hermes-trace-store.mjs';
+import { openHermesTraceStore, readPapReceipt } from '../scripts/hermes-trace-store.mjs';
 import { papTool, readHermesEvents } from '../src/hermes-events.mjs';
 import { createHermesHandler } from '../src/hermes-http.mjs';
+
+test('a generic signed API call contributes only metadata to the private trace', () => {
+  const path = '/api/inventory/{sku}';
+  const proof = readPapReceipt(JSON.stringify({ result: {
+    protocol_version: '1.0',
+    client_id: 'https://ai.rhyslindmark.com/poppy/hermes-agent.json',
+    company: { origin: 'https://store.example', identifier: 'https://accounts.example/tenant' },
+    data: { details: 'Private tool output' },
+    status: 200,
+    trace: [
+      { method: 'GET', host: 'store.example', path: '/.well-known/poppy.json', status: 200, signed: false },
+      { method: 'GET', host: 'inventory.example', path, status: 200, signed: true },
+    ],
+  } }));
+  assert.equal(proof.company, 'https://store.example');
+  assert.equal(proof.audience, 'https://accounts.example/tenant');
+  assert.equal(proof.path, path);
+  assert.equal(proof.requests.at(-1).signed, true);
+  assert.equal(JSON.stringify(proof).includes('Private tool output'), false);
+});
 
 test('Hermes event collection rejects reasoning, tool arguments, and events from other runs', async () => {
   const events = [

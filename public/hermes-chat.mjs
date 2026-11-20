@@ -99,14 +99,15 @@ function paintTelegram() {
     spans.push({ id: prefix, title: name, kind: tool.pap ? 'pap' : 'tool', depth: 1,
       start: tool.timestamp, end: tool.ended_at, state: tool.state, source: 'Hermes tool history',
       fields: tool.pap ? { Protocol: 'PAP 1.0', Company: tool.pap.company, Identity: tool.pap.client_id,
-        Session: 'Delegated ES256 · signed guest request', 'Catalog response': 'HTTP 200' } : {} });
+        Session: 'Delegated ES256 · signed guest request', 'API response': 'HTTP ' + tool.pap.http_status } : {} });
     if (!tool.pap) continue;
     for (const [j, req] of (tool.pap.requests ?? [tool.pap]).entries()) {
       const status = req.status ?? req.http_status;
-      const signed = req.path === tool.pap.path;
+      const signed = req.signed ?? req.path === tool.pap.path;
       spans.push({ id: prefix + ':' + j, title: `${req.method} ${req.path}`, depth: 2, kind: 'pap',
-        start: req.started_at, end: req.ended_at, state: `HTTP ${status}`, source: 'Commonplace tool receipt',
-        fields: { Company: tool.pap.company, Protocol: 'PAP 1.0', ...(signed && { Session: 'Delegated ES256 · signed guest' }) } });
+        start: req.started_at, end: req.ended_at, state: `HTTP ${status}`, source: 'Poppy tool receipt',
+        fields: { Company: tool.pap.company, Protocol: 'PAP 1.0', ...(req.host && { Host: req.host }),
+          ...(signed && { Session: 'Delegated ES256 · signed guest' }) } });
     }
   }
   if (turn.reply) spans.push({ id: turnPrefix + 'reply', title: 'Hermes → Telegram', kind: 'turn', depth: 1,
@@ -274,7 +275,7 @@ function showTrace(trace, state, reply) {
   for (const proof of proofs) {
     for (const request of proof.requests ?? []) item(papEvidence, `${request.method} ${request.path} · HTTP ${request.status}`, request);
     item(papEvidence, 'Signed guest Session', { 'Poppy-Version': proof.version, 'Poppy-Session': 'Signed · redacted',
-      client_id: proof.client_id, audience: proof.company, method: proof.method, path: proof.path, http_status: proof.http_status });
+      client_id: proof.client_id, audience: proof.audience ?? proof.company, method: proof.method, path: proof.path, http_status: proof.http_status });
   }
   for (const detail of [...traceEvents.querySelectorAll('details'), ...papEvidence.querySelectorAll('details')]) {
     detail.open = opened.has(detail.firstChild.textContent);
@@ -329,7 +330,8 @@ async function track(run, currentGeneration = generation, browserRequest) {
       status.textContent = '';
       setRun();
       if (payload.trace?.stream === 'connected' || payload.trace?.stream === 'connecting' ||
-          (!payload.trace?.pap?.length && payload.trace?.tools?.some((event) => event.ok && event.tool === 'mcp__poppy_pap__prepare_commonplace_edition'))) {
+          (!payload.trace?.pap?.length && payload.trace?.tools?.some((event) => event.ok &&
+            ['mcp__poppy_pap__prepare_commonplace_edition', 'mcp__poppy_pap__read_company_api'].includes(event.tool)))) {
         timer = setTimeout(async () => {
           try {
             const last = await call({ run });
