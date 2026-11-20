@@ -82,6 +82,7 @@ write('index.html', page('Personal Agent Protocol demo',
   '<div class="site-links"><a class="site-button" href="' + (ownerOrigin ? '/poppy/hermes">Message Hermes' : '/poppy/agent">Message the agent') + '</a>' +
   '<a href="#commonplace-demo">Try the Commonplace demo</a>' +
   '<a href="/poppy/agent-simulations">Run agent simulations</a>' +
+  '<a href="/poppy/telegram-trace">Explore a Telegram agent trace</a>' +
   '<a href="/poppy/hermes-conformance">See how Hermes uses PAP</a>' +
   '<a href="/poppy/cookbooks/">Browse the cookbooks</a></div></div></section>' +
   '<section class="site-band" id="commonplace-demo" aria-labelledby="commonplace-title"><div class="site-wrap site-demo-layout">' +
@@ -102,18 +103,46 @@ write('index.html', page('Personal Agent Protocol demo',
   { head: '<script type="module" src="/poppy/commonplace-demo.mjs"></script>', bodyClass: 'poppy-home', active: '/' }));
 
 const agentStyle = '<link rel="stylesheet" href="/poppy/agent-chat.css">';
+const telegramView = ownerOrigin ? new URL('/?view=telegram', ownerOrigin) : null;
+write('telegram-trace.html', page('Telegram agent trace', `
+  <h1>Telegram agent trace</h1>
+  <p class="trace-intro">Explore a simulated Hermes turn. Pick an example, then select a span to see the data passed between Telegram, the agent, and its tools.</p>
+  <div id="demo-explorer" hidden>
+    <div class="demo-toolbar">
+      <div class="demo-example"><label for="demo-example">Example</label><select id="demo-example"></select></div>
+      <p id="demo-stats" role="status"></p>
+    </div>
+    <div class="demo-workspace">
+      <div>
+        <section class="demo-panel" aria-labelledby="demo-overview-title">
+          <h2 id="demo-overview-title">Timing overview</h2><div id="demo-overview" aria-hidden="true"></div>
+        </section>
+        <section class="demo-panel" aria-labelledby="demo-waterfall-title">
+          <h2 id="demo-waterfall-title">Waterfall</h2>
+          <div class="demo-axis" aria-hidden="true"><span>Span</span><div id="demo-axis"></div><span>Duration</span></div>
+          <ol id="demo-waterfall" aria-label="Spans"></ol>
+        </section>
+      </div>
+      <section class="demo-panel" aria-labelledby="demo-inspector-title">
+        <h2 id="demo-inspector-title">Span details</h2>
+        <div id="demo-inspector" class="demo-details" aria-live="polite">
+          <h3></h3><p data-span-meta></p><p data-evidence hidden></p>
+          <h4 class="demo-payload">Input</h4><pre></pre>
+          <h4 class="demo-payload">Output</h4><pre></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+  <noscript><p>Enable JavaScript to inspect the example spans.</p></noscript>
+  ${telegramView ? '<p class="trace-owner"><a href="' + escape(telegramView.href) + '" rel="noreferrer">Open private RhysBot traces</a></p>' : ''}
+`, { head: '<link rel="stylesheet" href="/poppy/telegram-demo.css"><script type="module" src="/poppy/telegram-demo.mjs"></script>',
+  bodyClass: 'site-report poppy-trace' }));
+
 if (ownerOrigin) {
-  const telegramView = new URL(ownerOrigin);
-  telegramView.searchParams.set('view', 'telegram');
-  write('telegram-trace.html', page('RhysBot Telegram stack trace',
-    reportHeading('RhysBot Telegram stack trace', 'Keep this tab open while you chat with RhysBot in Telegram. Browse each turn as a waterfall and select a span to inspect tool calls, timing, and PAP evidence.') +
-    '<p><a class="site-button" href="' + escape(telegramView.href) + '" rel="noreferrer">Open Telegram stack trace</a></p>' +
-    '<p>Sign in with your Poppy access key. From the Poppy checkout on your Mac, run <code>npm run ask -- --copy-access-key</code> to copy it.</p>' +
-    '<p><a href="/poppy/hermes">Hermes web chat</a></p>'));
   write('hermes.html', page('Message Hermes',
     reportHeading('Message Hermes', 'Rhys’s private Poppy agent runs on DigitalOcean. The live chat shows calls, tool activity, and PAP evidence as Hermes works.') +
     '<p><a class="site-button" href="' + escape(ownerOrigin.href) + '" rel="noreferrer">Open private Hermes chat</a></p>' +
-    '<p><a href="/poppy/telegram-trace">Watch RhysBot’s Telegram stack trace</a></p>' +
+    '<p><a href="/poppy/telegram-trace">Explore a Telegram agent trace</a> · <a href="' + escape(telegramView.href) + '" rel="noreferrer">Open private RhysBot traces</a></p>' +
     '<p>On the Mac with the configured Hermes SSH connection, run <code>npm run ask -- --copy-access-key</code> ' +
     'from the Poppy source directory. Paste the key into the private chat to connect.</p>' +
     '<section class="agent-siri"><h2>Use Hermes with Siri</h2><ol>' +
@@ -226,6 +255,7 @@ write('sponsors.md', sponsors);
 
 for (const name of ['styles.css', 'tokens.css', 'branding.css', 'hermes-conformance.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
   'agent-simulations.css', 'agent-simulations.mjs',
+  'telegram-demo.css', 'telegram-demo.mjs', 'telegram-demo-data.mjs',
   'cookbook-cover.jpg', 'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
