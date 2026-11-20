@@ -140,12 +140,12 @@ function index(articles, groups) {
     '<a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
     '<a href="' + source + '">GitHub</a></nav></div>' +
     '<div class="cookbook-content cookbook-catalog"><section aria-labelledby="runnable-guides">' +
-    '<h2 id="runnable-guides">Runnable guides <span>' + articles.length + '</span></h2>' +
+    '<h2 id="runnable-guides">Runnable guides</h2>' +
     '<div class="cookbook-featured"><div><h3>' + escape(first.title) +
     '</h3><p>' + inline(first.description) + '</p></div>' +
     '<a class="cookbook-action" href="' + first.slug + '.html" aria-label="Read the guide to build a Personal Agent">Read the guide</a></div>' +
     '<ul class="cookbook-guides">' + tutorials + '</ul></section>' +
-    '<section aria-labelledby="proposals"><h2 id="proposals">Cookbook proposals <span>50</span></h2>' +
+    '<section aria-labelledby="proposals"><h2 id="proposals">50 cookbook proposals</h2>' +
     '<div class="cookbook-filter" data-filter hidden>' +
     '<div><label for="find-proposal">Search proposals</label>' +
     '<input id="find-proposal" type="search" placeholder="Search by task or capability" autocomplete="off"></div>' +
