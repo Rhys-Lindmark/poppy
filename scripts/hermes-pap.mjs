@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { companyOrigin, readProposal } from '../public/commonplace-agent.mjs';
 import { thumbprint, version } from '../src/protocol.mjs';
-import { createPoppyClient, guestSession as createGuestSession } from '../src/poppy-client.mjs';
+import { checkCompanySites, createPoppyClient, guestSession as createGuestSession } from '../src/poppy-client.mjs';
 
 const publicIdentity = companyOrigin + '/poppy/hermes-agent.json';
 const jwksUri = companyOrigin + '/poppy/hermes-jwks.json';
@@ -60,33 +60,36 @@ export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fet
   };
 }
 
+async function readToolInput() {
+  const chunks = [];
+  let length = 0;
+  for await (const chunk of process.stdin) {
+    length += chunk.length;
+    if (length > 16384) throw new Error('Poppy tool input is too large.');
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks));
+}
+
+async function execute(action) {
+  if (action === '--check-sites') {
+    const { sites } = await readToolInput();
+    return { sites: await checkCompanySites(sites) };
+  }
+  const identity = hermesIdentity(createPrivateKey(readFileSync(join(configuration, 'pap-root.pem'))));
+  if (action === '--identity') return { metadata: identity.metadata, jwks: identity.jwks };
+  const pairwiseKey = readFileSync(join(configuration, 'pap-pairwise.secret'));
+  if (action !== '--discover' && action !== '--read') return prepareGuestEdition({ identity, pairwiseKey });
+  const { company, ...operation } = await readToolInput();
+  const client = createPoppyClient({ identity, pairwiseKey });
+  const result = action === '--discover' ? await client.discover(company) : await client.read(company, operation);
+  return { ...result, client_id: identity.metadata.client_id, protocol_version: version };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const identity = hermesIdentity(createPrivateKey(readFileSync(join(configuration, 'pap-root.pem'))));
-    if (process.argv[2] === '--identity') {
-      console.log(JSON.stringify({ metadata: identity.metadata, jwks: identity.jwks }, null, 2));
-    } else {
-      const pairwiseKey = readFileSync(join(configuration, 'pap-pairwise.secret'));
-      const action = process.argv[2];
-      let result;
-      if (action === '--discover' || action === '--read') {
-        const chunks = [];
-        let length = 0;
-        for await (const chunk of process.stdin) {
-          length += chunk.length;
-          if (length > 16384) throw new Error('Poppy tool input is too large.');
-          chunks.push(chunk);
-        }
-        const { company, ...operation } = JSON.parse(Buffer.concat(chunks));
-        const client = createPoppyClient({ identity, pairwiseKey });
-        result = action === '--discover' ? await client.discover(company) : await client.read(company, operation);
-        result.client_id = identity.metadata.client_id;
-        result.protocol_version = version;
-      } else {
-        result = await prepareGuestEdition({ identity, pairwiseKey });
-      }
-      console.log(JSON.stringify(result));
-    }
+    const action = process.argv[2];
+    console.log(JSON.stringify(await execute(action), null, action === '--identity' ? 2 : 0));
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;

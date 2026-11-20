@@ -1,12 +1,39 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createPoppyClient } from '../src/poppy-client.mjs';
+import { checkCompanySites, createPoppyClient } from '../src/poppy-client.mjs';
 import { isPublicAddress, publicUrl } from '../src/poppy-https.mjs';
 import { decodeJwt, keyPair, verifyJwt } from '../src/protocol.mjs';
 
 const root = keyPair();
 const identity = { key: root, metadata: { client_id: 'https://agent.example/agent.json' } };
 const response = (data, status = 200, headers = {}) => ({ status, headers, text: JSON.stringify(data) });
+
+test('batch discovery distinguishes publication, missing and blocked sites', async () => {
+  const visited = [];
+  const transport = async (url, options) => {
+    assert.equal(options.headers, undefined);
+    const { hostname } = new URL(url);
+    visited.push(hostname);
+    if (hostname === 'brand.example') return response(null, 301, { location: 'https://www.brand.example/.well-known/poppy.json' });
+    if (hostname === 'www.brand.example') return response({ protocol_version: '0.4', organization: { domain: hostname } });
+    if (hostname === 'missing.example') return response(null, 404);
+    if (hostname === 'blocked.example') return response(null, 403);
+    if (hostname === 'offline.example') throw new Error('offline');
+    return response({ protocol_version: '1.0', organization: { domain: 'another.example' } });
+  };
+  const results = await checkCompanySites(
+    ['brand.example', 'missing.example', 'blocked.example', 'offline.example', 'invalid.example', 'http://example.com'],
+    { transport },
+  );
+  assert.deepEqual(results.map(({ status }) => status), [
+    'published', 'missing', 'blocked', 'unreachable', 'invalid_manifest', 'invalid_site',
+  ]);
+  assert.equal(results[0].manifest_url, 'https://www.brand.example/.well-known/poppy.json');
+  assert.equal(results[0].protocol_version, '0.4');
+  assert.equal(results[2].http_status, 403);
+  assert.equal(visited.length, 6);
+  await assert.rejects(checkCompanySites(Array(21).fill('www.brand.example'), { transport }), /between 1 and 20/);
+});
 
 test('discovers an independent Company, validates its issuer, and signs its advertised read only', async () => {
   const company = 'https://shop.example';

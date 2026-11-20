@@ -36,6 +36,19 @@ def invoke(action: str, payload: dict) -> dict:
 
 
 @mcp.tool()
+def check_company_sites(sites: list[str]) -> dict:
+    """Check public Poppy discovery on 1 to 20 official Company hostnames or HTTPS URLs.
+
+    Use for a multi-site discovery or adoption request. Published means the well-known
+    document's serving host and declared version matched. It does not establish API
+    access. Missing means an HTTP 404 or 410. A blocked or unreachable site is unverified.
+    """
+    if not 1 <= len(sites) <= 20:
+        return {"available": False, "reason": "Supply between 1 and 20 official site hostnames."}
+    return invoke("--check-sites", {"sites": sites})
+
+
+@mcp.tool()
 def discover_company(company: str) -> dict:
     """Discover Poppy capabilities and read operations for the Company's official HTTPS URL or hostname.
 

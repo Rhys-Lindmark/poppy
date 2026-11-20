@@ -7,6 +7,11 @@ const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 const protocolVersion = /^\d{1,5}\.\d{1,5}$/;
 const fields = (obj) => Object.entries(obj ?? {});
 
+function companyUrl(value) {
+  const address = typeof value === 'string' && /^[a-z0-9.-]+$/i.test(value) ? 'https://' + value : value;
+  return publicUrl(address);
+}
+
 export function guestSession({ root, clientId, audience, subject }) {
   const iat = now();
   const delegated = keyPair();
@@ -48,6 +53,42 @@ async function discoverManifest(company, get) {
     return { origin: url.origin, manifest };
   }
   throw new Error('Too many discovery redirects.');
+}
+
+export async function checkCompanySites(sites, { transport = poppyHttps } = {}) {
+  if (!Array.isArray(sites) || sites.length === 0 || sites.length > 20) {
+    throw new Error('Supply between 1 and 20 Company hostnames or HTTPS URLs.');
+  }
+  const deadline = AbortSignal.timeout(22000);
+  async function check(site) {
+    let host;
+    try { host = companyUrl(site).host; }
+    catch { return { status: 'invalid_site' }; }
+    const signal = AbortSignal.any([deadline, AbortSignal.timeout(6500)]);
+    let response;
+    let unreachable = false;
+    try {
+      const { origin, manifest } = await discoverManifest('https://' + host, async (url) => {
+        try { response = await transport(url, { signal, limit: 128 * 1024 }); }
+        catch (error) { unreachable = true; throw error; }
+        return response;
+      });
+      return { site: host, status: 'published', http_status: 200, manifest_url: origin + wellKnown,
+        protocol_version: manifest.protocol_version };
+    } catch {
+      const http = response?.status;
+      const status = unreachable || http >= 500 ? 'unreachable'
+        : http === 404 || http === 410 ? 'missing'
+          : [401, 403, 429].includes(http) ? 'blocked' : 'invalid_manifest';
+      return { site: host, status, ...(!unreachable && http !== undefined && { http_status: http }) };
+    }
+  }
+
+  const result = [];
+  for (let offset = 0; offset < sites.length; offset += 4) {
+    result.push(...await Promise.all(sites.slice(offset, offset + 4).map(check)));
+  }
+  return result;
 }
 
 function issuerUrl(value) {
@@ -211,9 +252,7 @@ export function createPoppyClient({ identity, pairwiseKey, transport = poppyHttp
   }
 
   async function resolve(company, get, selectedApi) {
-    // A model may supply the official hostname without the HTTPS scheme.
-    const address = typeof company === 'string' && /^[a-z0-9.-]+$/i.test(company) ? 'https://' + company : company;
-    const info = await discoverCompany(publicUrl(address).origin, get);
+    const info = await discoverCompany(companyUrl(company).origin, get);
     const operations = [];
     const unavailable = [];
     for (const api of (info.manifest.apis ?? []).filter(({ type, url }) => type === 'openapi' && (!selectedApi || selectedApi === url)).slice(0, 6)) {
