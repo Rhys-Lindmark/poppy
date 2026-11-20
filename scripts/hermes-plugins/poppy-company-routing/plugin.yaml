@@ -1,0 +1,5 @@
+name: poppy-company-routing
+version: 1.0.0
+description: Prefer Poppy for company requests in Hermes.
+hooks:
+  - pre_llm_call

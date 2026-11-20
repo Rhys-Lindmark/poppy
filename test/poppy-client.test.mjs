@@ -62,7 +62,7 @@ test('discovers an independent Company, validates its issuer, and signs its adve
       response({ available: true, echoed: signer });
   };
   const agent = createPoppyClient({ identity, pairwiseKey: 'fixture', transport });
-  const discovered = await agent.discover('https://www.shop.example');
+  const discovered = await agent.discover('www.shop.example');
   assert.equal(discovered.company.identifier, issuer);
   assert.deepEqual(discovered.operations.map(({ id }) => id), ['inventory']);
   await assert.rejects(agent.read(company, { id: 'placeOrder' }), /advertised read operation/);

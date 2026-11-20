@@ -211,7 +211,9 @@ export function createPoppyClient({ identity, pairwiseKey, transport = poppyHttp
   }
 
   async function resolve(company, get, selectedApi) {
-    const info = await discoverCompany(publicUrl(company).origin, get);
+    // A model may supply the official hostname without the HTTPS scheme.
+    const address = typeof company === 'string' && /^[a-z0-9.-]+$/i.test(company) ? 'https://' + company : company;
+    const info = await discoverCompany(publicUrl(address).origin, get);
     const operations = [];
     const unavailable = [];
     for (const api of (info.manifest.apis ?? []).filter(({ type, url }) => type === 'openapi' && (!selectedApi || selectedApi === url)).slice(0, 6)) {
