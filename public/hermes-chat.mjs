@@ -26,6 +26,8 @@ if (telegramMode) {
   document.querySelector('h1').textContent = 'RhysBot trace explorer';
   document.title = 'RhysBot trace explorer';
   document.querySelector('a[href="/?view=telegram"]').setAttribute('aria-current', 'page');
+  document.querySelector('#telegram-sign-in-help').hidden = false;
+  connect.querySelector('button').textContent = 'Sign in to the trace';
 }
 let key = '';
 let running;
@@ -180,15 +182,50 @@ async function trackTelegram(currentGeneration = generation) {
     try {
       const result = await call({ view: 'telegram' });
       if (currentGeneration !== generation) return;
-      renderTelegram(result.turns);
-      const label = result.turns.length ? 'Watching RhysBot’s private Telegram chat.' : 'Waiting for a RhysBot Telegram message.';
-      if (telegramStatus.textContent !== label) telegramStatus.textContent = label;
+      showTelegram(result.turns);
     } catch (error) {
       if (currentGeneration !== generation) return;
+      if (error.status === 401) {
+        closeTelegram('Your trace session expired. Sign in to reconnect.');
+        return;
+      }
       telegramStatus.textContent = error.message + ' Retrying…';
     }
   }
   timer = setTimeout(() => trackTelegram(currentGeneration), 1500);
+}
+
+function showTelegram(turns) {
+  renderTelegram(turns);
+  const latest = turns[0];
+  const count = latest?.tools.length ?? 0;
+  const label = latest ? `Live · latest turn ${clock(latest.timestamp)} · ${count} tool ${count === 1 ? 'call' : 'calls'}`
+    : 'Live · waiting for a RhysBot Telegram message.';
+  if (telegramStatus.textContent !== label) telegramStatus.textContent = label;
+}
+
+function openTelegram(turns) {
+  connect.hidden = true;
+  telegram.hidden = false;
+  status.textContent = '';
+  showTelegram(turns);
+  const current = generation;
+  timer = setTimeout(() => trackTelegram(current), 1500);
+}
+
+function closeTelegram(message = '') {
+  generation += 1;
+  clearTimeout(timer);
+  key = '';
+  telegramKey = undefined;
+  telegramHistory = [];
+  selectedSpan = undefined;
+  telegramTurns.replaceChildren();
+  telegramStatus.textContent = '';
+  telegram.hidden = true;
+  connect.hidden = false;
+  status.textContent = message;
+  keyField.focus();
 }
 
 function item(target, title, data) {
@@ -245,20 +282,22 @@ function showMessage(speaker, text) {
   messages.append(item);
 }
 
-async function call({ method = 'GET', run, body, view } = {}) {
+async function call({ method = 'GET', run, body, view, action, ticket } = {}) {
   const url = new URL('/message', location.origin);
   if (view) url.searchParams.set('view', view);
+  if (action) url.searchParams.set('action', action);
   if (run) {
     url.searchParams.set('run', run);
     if (method === 'GET') url.searchParams.set('trace', '1');
   }
   const res = await fetch(url, {
     method, redirect: 'error', signal: AbortSignal.timeout(12000),
-    headers: { Authorization: 'Bearer ' + key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { ...(key && { Authorization: 'Bearer ' + key }), ...(ticket && { 'X-Poppy-Pairing-Ticket': ticket }),
+      ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await res.json();
-  if (!res.ok) throw new Error(payload.reply);
+  if (!res.ok) throw Object.assign(new Error(payload.reply), { status: res.status });
   return payload;
 }
 
@@ -308,15 +347,17 @@ connect.addEventListener('submit', async (event) => {
   button.disabled = true;
   key = keyField.value.trim();
   try {
+    if (telegramMode) {
+      await call({ method: 'POST', view: 'telegram', action: 'session' });
+      key = '';
+      keyField.value = '';
+      openTelegram((await call({ view: 'telegram' })).turns);
+      return;
+    }
     await call();
     keyField.value = '';
     connect.hidden = true;
     status.textContent = '';
-    if (telegramMode) {
-      telegram.hidden = false;
-      await trackTelegram();
-      return;
-    }
     conversation.hidden = false;
     const run = new URL(location.href).searchParams.get('run');
     if (run) track(run);
@@ -395,16 +436,34 @@ document.querySelector('#disconnect').addEventListener('click', () => {
   keyField.focus();
 });
 
-document.querySelector('#telegram-disconnect').addEventListener('click', () => {
-  generation += 1;
-  clearTimeout(timer);
-  key = '';
-  telegramKey = undefined;
-  telegramHistory = [];
-  selectedSpan = undefined;
-  telegramTurns.replaceChildren();
-  telegramStatus.textContent = '';
-  telegram.hidden = true;
-  connect.hidden = false;
-  keyField.focus();
+document.querySelector('#telegram-disconnect').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await call({ method: 'POST', view: 'telegram', action: 'logout' });
+    closeTelegram();
+  } catch (error) {
+    telegramStatus.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
 });
+
+async function resumeTelegram() {
+  const link = new URL(location.href);
+  const ticket = new URLSearchParams(link.hash.slice(1)).get('pair');
+  if (ticket) {
+    link.hash = '';
+    history.replaceState(null, '', link);
+  }
+  connect.hidden = true;
+  status.textContent = 'Opening RhysBot’s trace…';
+  try {
+    if (ticket) await call({ method: 'POST', view: 'telegram', action: 'session', ticket });
+    openTelegram((await call({ view: 'telegram' })).turns);
+  } catch (error) {
+    closeTelegram(!ticket && error.status === 401 ? '' : error.message);
+  }
+}
+
+if (telegramMode) void resumeTelegram();

@@ -1,4 +1,5 @@
 import { papTool, readHermesEvents } from './hermes-events.mjs';
+import { createTelegramAccess } from './telegram-access.mjs';
 
 const runPattern = /^run_[A-Za-z0-9_-]{3,100}$/;
 const keyPattern = /^[A-Za-z0-9_-]{32,128}$/;
@@ -52,6 +53,7 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
   }
   const admissions = new Map();
   const traces = new Map();
+  const telegramAccess = createTelegramAccess(new URL(publicPage).origin);
   async function call(path, options = {}) {
     const result = await fetcher(new URL(path, origin), {
       ...options, redirect: 'error', signal: AbortSignal.timeout(8000), headers: {
@@ -112,13 +114,18 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
     const url = new URL(request.url);
     if (url.pathname === '/health' && request.method === 'GET') return response({ status: 'ok' });
     if (url.pathname !== '/message') return response({ reply: 'Not found.' }, 404);
-    if (!(await matchesToken(request, accessToken))) {
+    const hasKey = await matchesToken(request, accessToken);
+    const telegramView = url.searchParams.get('view') === 'telegram';
+    if (telegramView && request.method === 'POST') {
+      return telegramAccess.change(request, url.searchParams.get('action'), hasKey, response);
+    }
+    if (!hasKey && !(telegramView && request.method === 'GET' && telegramAccess.allows(request))) {
       return response({ reply: 'Enter your Poppy access key.' }, 401, { 'WWW-Authenticate': 'Bearer' });
     }
     if (!['POST', 'GET', 'DELETE'].includes(request.method)) {
       return response({ reply: 'Method is unavailable.' }, 405, { Allow: 'POST, GET, DELETE' });
     }
-    if (request.method === 'GET' && url.searchParams.get('view') === 'telegram') {
+    if (request.method === 'GET' && telegramView) {
       if (!traceStore?.telegram) return response({ reply: 'The Telegram trace is unavailable.' }, 503);
       try { return response({ turns: traceStore.telegram() }); }
       catch { return response({ reply: 'Telegram history is temporarily unavailable.' }, 503); }

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Message Poppy</title>
-  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-waterfall">
-  <script type="module" src="/hermes-chat.mjs?v=telegram-waterfall"></script>
+  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-sign-in">
+  <script type="module" src="/hermes-chat.mjs?v=telegram-sign-in"></script>
 </head>
 <body>
   <main>
@@ -16,10 +16,11 @@
       <label for="key">Poppy access key</label>
       <input id="key" type="password" maxlength="128" required autocomplete="current-password" spellcheck="false">
       <button>Connect to Hermes</button>
+      <p id="telegram-sign-in-help" hidden>From the Poppy checkout on your Mac, run <code>npm run ask -- --open-telegram-trace</code>, or paste your Poppy access key here.</p>
     </form>
     <p id="status" role="status"></p>
     <section id="telegram-trace" aria-label="RhysBot Telegram stack trace" hidden>
-      <div class="telegram-toolbar"><p id="telegram-status" role="status"></p><button id="telegram-disconnect" type="button">Disconnect</button></div>
+      <div class="telegram-toolbar"><p id="telegram-status" role="status"></p><button id="telegram-disconnect" type="button">Sign out</button></div>
       <div class="telegram-controls"><label for="telegram-turn">Turn</label><select id="telegram-turn"><option value="">Latest turn</option></select></div>
       <div id="telegram-workspace" class="telegram-workspace" hidden>
         <div><section aria-labelledby="overview-title" class="telegram-waterfall telegram-overview">

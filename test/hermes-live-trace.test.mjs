@@ -103,3 +103,30 @@ test('the web stack trace shows only the configured Telegram DM and attaches pro
   assert.ok(previous.tools[0].pap.requests[3].ended_at > previous.tools[0].pap.requests[3].started_at);
   assert.equal(previous.reply.characters, 13);
 });
+
+test('Telegram trace pairing is single-use, read-only, and keeps a session on refresh', async () => {
+  const origin = 'https://poppy.example';
+  const access = 'b'.repeat(48);
+  const endpoint = origin + '/message?view=telegram';
+  const handle = createHermesHandler({ accessToken: access, hermesToken: 'c'.repeat(48), publicPage: origin + '/',
+    traceStore: { telegram: () => [{ id: 1, tools: [] }] } });
+  const action = (name, headers) => handle(new Request(endpoint + '&action=' + name, { method: 'POST', headers }));
+  assert.equal((await handle(new Request(endpoint))).status, 401);
+  assert.equal((await action('pair', {})).status, 401);
+  const pair = await action('pair', { Authorization: 'Bearer ' + access });
+  const { ticket } = await pair.json();
+  const ticketHeaders = { Origin: origin, 'X-Poppy-Pairing-Ticket': ticket };
+  assert.equal((await action('session', { ...ticketHeaders, Origin: 'https://other.example' })).status, 403);
+  const signed = await action('session', ticketHeaders);
+  assert.equal(signed.status, 200);
+  const session = signed.headers.get('Set-Cookie');
+  assert.match(session, /Secure; HttpOnly; SameSite=Strict/);
+  assert.equal((await action('session', ticketHeaders)).status, 401);
+  const headers = { Cookie: session.split(';')[0] };
+  assert.deepEqual(await (await handle(new Request(endpoint, { headers }))).json(), { turns: [{ id: 1, tools: [] }] });
+  assert.equal((await handle(new Request(origin + '/message', { method: 'POST', headers }))).status, 401);
+  assert.equal((await action('logout', { ...headers, Origin: 'https://other.example' })).status, 403);
+  assert.match((await action('logout', { ...headers, Origin: origin })).headers.get('Set-Cookie'), /Max-Age=0/);
+  assert.equal((await handle(new Request(endpoint, { headers }))).status, 401);
+  assert.equal((await action('session', { Origin: origin, Authorization: 'Bearer ' + access })).status, 200);
+});

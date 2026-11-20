@@ -2,7 +2,48 @@ import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const args = process.argv.slice(2);
-if (args[0] === '--server') {
+if (args[0] === '--telegram-pair') {
+  const result = await fetch('http://127.0.0.1:8652/message?view=telegram&action=pair', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + process.env.POPPY_ACCESS_TOKEN },
+    signal: AbortSignal.timeout(6000),
+  });
+  if (!result.ok) throw new Error('Poppy could not create a one-time sign-in.');
+  const { ticket } = await result.json();
+  const url = new URL('/?view=telegram', process.env.POPPY_OWNER_PAGE);
+  console.log(JSON.stringify({ url: url.href, ticket }));
+} else if (args[0] === '--open-telegram-trace' && process.platform === 'darwin') {
+  try {
+    const remote = 'set -a; . "$HOME/.config/poppy/hermes.env"; set +a; ' +
+      'exec "$HOME/.config/poppy/node" "$HOME/.local/share/poppy/scripts/poppy-ask.mjs" --telegram-pair';
+    const ssh = spawn('ssh', ['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', 'hermes', remote],
+      { stdio: ['ignore', 'pipe', 'ignore'] });
+    const wait = (child) => new Promise((resolve) => {
+      child.on('error', () => resolve(1));
+      child.on('close', (code) => resolve(code ?? 1));
+    });
+    const sshExit = wait(ssh);
+    const chunks = [];
+    for await (const chunk of ssh.stdout) chunks.push(chunk);
+    if (await sshExit) throw new Error('Unable to obtain a sign-in ticket.');
+    const { url, ticket } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const target = new URL(url);
+    if (target.protocol !== 'https:' || target.username || target.password || target.pathname !== '/' ||
+        target.search !== '?view=telegram' || target.hash || !/^[A-Za-z0-9_-]{43}$/.test(ticket)) {
+      throw new Error('Unexpected one-time sign-in result.');
+    }
+    target.hash = new URLSearchParams({ pair: ticket }).toString();
+    // Pass the single-use ticket to the system browser launcher over stdin.
+    const browser = spawn('/usr/bin/osascript', [], { stdio: ['pipe', 'ignore', 'ignore'] });
+    const browserExit = wait(browser);
+    browser.stdin.on('error', () => {});
+    browser.stdin.end('open location ' + JSON.stringify(target.href) + '\n');
+    if (await browserExit) throw new Error('The Mac could not open the browser.');
+    console.log('Opened the private Telegram trace in your browser.');
+  } catch {
+    console.error('Could not open the trace. Open the Poppy Telegram trace and sign in with your access key.');
+    process.exitCode = 1;
+  }
+} else if (args[0] === '--server') {
   const { POPPY_ACCESS_TOKEN } = process.env;
   if (!POPPY_ACCESS_TOKEN) throw new Error('Poppy access is not configured on the server.');
   const chunks = [];

@@ -12,6 +12,8 @@ The private chat polls `/message?run=…&trace=1`. The bridge listens to the nat
 
 The [Telegram stack trace](https://ai.rhyslindmark.com/poppy/telegram-trace) watches RhysBot’s latest private turns. The authenticated bridge uses a separate read-only query scoped to the Telegram owner configured in `~/.config/poppy/telegram-owner`. Select a span in the waterfall to see tool names, recorded results, and matching signed Commonplace requests. Durations use session timestamps and the Commonplace tool’s HTTP timings. Message contents, arguments and raw tool results stay out of the trace payload. The view refreshes as Hermes saves events to its session database.
 
+On the Mac with the Hermes SSH alias, run `npm run ask -- --open-telegram-trace` to open the explorer with a single-use sign-in ticket. You can also sign in with your Poppy access key. The browser keeps an HTTP-only session scoped to reading Telegram traces for up to 12 hours. Use **Sign out** to end it early.
+
 ## PAP 1.0 capabilities
 
 | Part of PAP | Hermes integration |
