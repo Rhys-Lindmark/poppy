@@ -88,7 +88,7 @@ function readGuide(repo, guide) {
 function article(guide) {
   const items = guide.outline.map(({ id, label }) =>
     '<li><a href="#' + id + '">' + escape(label) + '</a></li>').join('');
-  return '<div class="cookbook-title"><p class="cookbook-breadcrumb"><a href="./">Cookbooks</a>' +
+  return '<div class="cookbook-title cookbook-entry-title"><p class="cookbook-breadcrumb"><a href="./">Cookbooks</a>' +
     '<span> / </span>' + escape(guide.topic) + '</p><h1>' + escape(guide.title) + '</h1>' +
     '<p class="cookbook-intro">' + inline(guide.description) + '</p>' +
     '<p class="cookbook-source"><a href="' + guide.slug + '.md">Markdown</a>' +
@@ -117,11 +117,10 @@ function proposalGroups(repo) {
 }
 
 function index(articles, groups) {
-  const groupLinks = groups.map(({ title }) =>
-    '<li data-proposal-link="' + anchor(title) + '"><a href="#' + anchor(title) + '">' + escape(title) + '</a></li>').join('');
-  const tutorials = articles.map(({ slug, title, topic, description }) =>
-    '<li><div><h3><a href="' + slug + '.html">' + escape(title) + '</a></h3>' +
-    '<p>' + inline(description) + '</p></div><span>' + escape(topic) + '</span></li>').join('');
+  const topics = groups.map(({ title }) =>
+    '<option value="' + anchor(title) + '">' + escape(title) + '</option>').join('');
+  const tutorials = articles.map(({ slug, title, topic }) =>
+    '<li><a href="' + slug + '.html">' + escape(title) + '</a><span>' + escape(topic) + '</span></li>').join('');
   const proposals = groups.map(({ title, entries }) =>
     '<div class="cookbook-group" data-proposal-group><h3 id="' + anchor(title) + '">' + escape(title) + '</h3>' +
     '<ul>' + entries.map(({ id, label, outcome }) => {
@@ -131,19 +130,21 @@ function index(articles, groups) {
         '</a>' : '<strong>' + escape(label) + '</strong>') + '</p> <p>' + escape(outcome) + '</p></li>';
     }).join('') + '</ul></div>').join('');
 
-  return '<div class="cookbook-title"><h1>Poppy cookbooks</h1><p class="cookbook-intro">' +
-    'Runnable examples for building Personal Agents, adding Poppy to a store, and checking what works.</p>' +
-    '<p class="cookbook-source"><a href="/poppy/source.tar.gz">Download source</a><a href="' + source +
-    '">GitHub repository</a></p></div><div class="cookbook-layout">' +
-    '<nav class="cookbook-outline" aria-label="Cookbook sections"><p>Browse</p><ul>' +
-    '<li><a href="#runnable-guides">Runnable guides</a></li><li><a href="#proposals">50 proposals</a></li>' +
-    groupLinks + '</ul></nav><div class="cookbook-content"><section aria-labelledby="runnable-guides">' +
-    '<h2 id="runnable-guides">Runnable guides</h2><ul class="cookbook-guides">' + tutorials +
+  return '<div class="cookbook-title cookbook-catalog-title"><h1>Personal Agent Protocol cookbooks</h1><p class="cookbook-intro">' +
+    'Build a personal agent, connect a store, or test how they work together.</p>' +
+    '<nav class="cookbook-source" aria-label="Cookbook resources">' +
+    '<a href="#runnable-guides">Runnable guides</a><a href="#proposals">50 proposals</a>' +
+    '<a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
+    '<a href="' + source + '">GitHub</a></nav></div>' +
+    '<div class="cookbook-content cookbook-catalog"><section aria-labelledby="runnable-guides">' +
+    '<h2 id="runnable-guides">Runnable guides <span>' + articles.length + '</span></h2><ul class="cookbook-guides">' + tutorials +
     '</ul></section><section aria-labelledby="proposals"><h2 id="proposals">50 proposals</h2>' +
-    '<div class="cookbook-filter" data-filter hidden><label for="find-proposal">Filter proposals</label>' +
-    '<input id="find-proposal" type="search" placeholder="Search by task or capability" autocomplete="off">' +
-    '<p data-count role="status"></p></div>' + proposals +
-    '<p><a href="https://personalagentprotocol.org/docs/demos">All Poppy community demos</a></p></section></div></div>';
+    '<div class="cookbook-filter" data-filter hidden>' +
+    '<div><label for="find-proposal">Search proposals</label>' +
+    '<input id="find-proposal" type="search" placeholder="Search by task or capability" autocomplete="off"></div>' +
+    '<div><label for="proposal-topic">Topic</label><select id="proposal-topic"><option value="">All topics</option>' +
+    topics + '</select></div><p data-count role="status"></p></div>' + proposals +
+    '<p><a href="https://personalagentprotocol.org/docs/demos">All Poppy community demos</a></p></section></div>';
 }
 
 export function buildCookbooks({ repo, route, write, page }) {
@@ -154,5 +155,5 @@ export function buildCookbooks({ repo, route, write, page }) {
     write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide), head, 'cookbook-page'));
     write('cookbooks/' + guide.slug + '.md', guide.markdown);
   }
-  write('cookbooks/index.html', page('Poppy cookbooks', index(articles, proposalGroups(repo)), head, 'cookbook-page'));
+  write('cookbooks/index.html', page('Personal Agent Protocol cookbooks', index(articles, proposalGroups(repo)), head, 'cookbook-page'));
 }

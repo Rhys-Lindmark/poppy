@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, copyFileSync, cpSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +19,7 @@ const json = (path, value) => write(path, JSON.stringify(value, null, 2) + '\n')
 const siteOrigin = 'https://ai.rhyslindmark.com';
 const route = '/poppy';
 const links = [
-  [route + '/', 'Poppy'], [route + '/cookbooks/', 'Cookbooks'],
+  [route + '/', 'Personal Agent Protocol'], [route + '/cookbooks/', 'Cookbooks'],
   [route + '/protocol-trace.html', 'Delivery trace'], [route + '/coverage.html', 'Sales coverage'],
   [route + '/poppyval.html', 'PoppyVal'],
   [route + '/sponsors.html', 'Sponsors'],
@@ -28,7 +28,8 @@ function page(title, body, head = '', bodyClass = '') {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta name="description" content="Poppy Personal Agent Protocol demo with Commonplace."><title>' +
-    escape(title) + '</title><link rel="stylesheet" href="' + route + '/styles.css">' + head +
+    escape(title) + '</title><link rel="stylesheet" href="' + route + '/styles.css">' +
+    '<link rel="stylesheet" href="' + route + '/branding.css">' + head +
     '</head><body' + (bodyClass ? ' class="' + escape(bodyClass) + '"' : '') + '><header><nav aria-label="Main">' +
     links.map(([href, label]) => '<a href="' + href + '">' + label + '</a>').join('') +
     '</nav></header><main>' + body + '</main></body></html>\n';
@@ -52,7 +53,11 @@ json('openapi.json', {
 });
 json('api/edition.json', edition);
 
-write('index.html', page('Poppy', '<section><h1>Poppy</h1><p>Prepare a reading edition from the ' +
+write('index.html', page('Personal Agent Protocol demo',
+  '<section class="brand-hero" aria-labelledby="protocol"><h1 id="protocol">Personal Agent Protocol</h1>' +
+  '<p class="brand-intro">An open protocol for every company and every personal agent.</p>' +
+  '<p><a href="https://personalagentprotocol.org/docs/introduction">Read the docs</a></p></section>' +
+  '<section><h2>Commonplace store demo</h2><p>Prepare a reading edition from the ' +
   '<a href="/commonplace/">Commonplace store</a>.</p><button class="primary" id="start">Find an edition</button>' +
   '<p id="status" role="status"></p></section><section id="review" hidden><h2 id="edition-title"></h2><p id="terms"></p>' +
   '<details><summary>Quotation sources</summary><ul id="edition-sources"></ul></details>' +
@@ -62,8 +67,8 @@ write('index.html', page('Poppy', '<section><h1>Poppy</h1><p>Prepare a reading e
   '<tbody id="trace-body"></tbody></table><p class="note"><a href="/.well-known/poppy.json">Discovery document</a></p></section>' +
   '<section><h2>Run the signed sandbox</h2><p><a href="/poppy/source.tar.gz">Download the source, runnable guides, and sponsor setup</a>.</p>' +
   '<p>The local HTTPS sandbox includes delegated Session signing, Direct Sign-In, and approval of the delivery change. ' +
-  '<a href="/poppy/protocol-trace.html">View a recorded run</a>.</p></section>',
-  '<script type="module" src="/poppy/commonplace-demo.mjs"></script>'));
+  '<a href="/poppy/protocol-trace.html#replay">Replay a recorded run</a>.</p></section>',
+  '<script type="module" src="/poppy/commonplace-demo.mjs"></script>', 'poppy-home'));
 
 buildCookbooks({ repo, route, write, page });
 
@@ -82,9 +87,18 @@ json('delivery-trace.json', trace);
 write('protocol-trace.html', page('Delivery rescheduling trace',
   '<h1>Delivery rescheduling trace</h1><p>The seeded Demo Store moved the order from Friday to ' +
   escape(trace.outcome) + ' after scoped sign-in and approval. This redacted trace was captured over local HTTPS.</p>' +
-  traceTable(trace.requests) +
+  '<section id="replay" data-delivery-replay aria-labelledby="replay-title"><h2 id="replay-title">Replay the delivery change</h2>' +
+  '<div data-replay-controls hidden><button type="button" class="primary" data-replay-start>Start replay</button>' +
+  '<div class="actions" data-replay-navigation hidden>' +
+  '<button type="button" data-replay-previous>Previous request</button>' +
+  '<button type="button" class="primary" data-replay-next>Next request</button>' +
+  '<button type="button" data-replay-restart>Start over</button>' +
+  '<button type="button" data-replay-all>Show all requests</button></div>' +
+  '<p role="status"></p></div>' +
+  traceTable(trace.requests) + '</section>' +
   '<p><a href="delivery-trace.json">Download the request trace</a></p>' +
-  '<p><a href="/poppy/cookbooks/delivery-approval.html">Replay the scenario</a></p>'));
+  '<p><a href="/poppy/cookbooks/delivery-approval.html">Run the scenario locally</a></p>',
+  '<script type="module" src="/poppy/trace-replay.mjs"></script>'));
 
 const sponsors = readFileSync(join(repo, 'docs/sponsors.md'), 'utf8');
 const sponsorRows = [...sponsors.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \|$/gm)].slice(2);
@@ -97,12 +111,14 @@ write('sponsors.html', page('Hackathon sponsors', '<h1>Hackathon sponsors</h1>' 
   '<p class="note"><a href="/poppy/sponsors.md">Setup instructions</a></p>'));
 write('sponsors.md', sponsors);
 
-for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs', 'commonplace-client.mjs', 'cookbooks.css', 'cookbooks.mjs']) {
+for (const name of ['styles.css', 'tokens.css', 'branding.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
+  'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +
       '\n#status { margin-block: 0.7rem; }\n');
   } else copyFileSync(path, join(site, name));
 }
+cpSync(join(repo, 'public/fonts'), join(site, 'fonts'), { recursive: true });
 execFileSync('tar', ['-czf', join(site, 'source.tar.gz'), '-C', repo,
   'README.md', 'GLOSSARY.md', 'package.json', 'src', 'public', 'data', 'test', 'docs', 'scripts'], { timeout: 10000, env: { ...process.env, COPYFILE_DISABLE: '1' } });
