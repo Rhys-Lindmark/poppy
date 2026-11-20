@@ -45,11 +45,13 @@ button[type="button"] { background: transparent; color: var(--accent); }
 #telegram-key-form { max-width: 29rem; margin-block: 0.65rem; }
 #telegram-key-form p { font-size: 0.9rem; margin-block: 0.45rem; }
 .telegram-view {
-  --paper: #141b19; --ink: #ecf0e7; --input: #1d2926; --accent: #bcd7c0;
-  --border: #60736b; --line: #34463e; --focus: #f0b86a;
-  --trace-muted: #a9beb5; --trace-tool: #97b6ad; --trace-pap: #e8ba70;
-  --trace-rail: #2a3b34;
-  color-scheme: dark;
+  --paper: #f7f7f5; --ink: #111110; --input: #fffdfa; --accent: #216b48;
+  --border: #807d70; --line: #d4d3cc; --focus: #a84e00;
+  --trace-muted: #57564d; --trace-tool: #216b48; --trace-pap: #c45b00;
+  --trace-turn: #3d3d3a; --trace-rail: #f1f0ec; --trace-selected: #fff4e6;
+  --trace-inspector: #191916; --trace-inspector-line: #525047;
+  --trace-inspector-text: #f7f7f5; --trace-inspector-muted: #d4d3cc;
+  --trace-inspector-accent: #ff9a3f;
   color: var(--ink);
   background: var(--paper);
   margin: 0;
@@ -65,6 +67,8 @@ button[type="button"] { background: transparent; color: var(--accent); }
 .telegram-workspace:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); gap: 1rem; }
 .telegram-waterfall, .telegram-inspector { min-width: 0; border: 1px solid var(--line); border-radius: 0.45rem; background: var(--input); }
 .telegram-waterfall h2, .telegram-inspector h2 { padding: 0.8rem 1rem; margin: 0; border-bottom: 1px solid var(--line); font-size: 1rem; }
+.telegram-inspector { background: var(--trace-inspector); color: var(--trace-inspector-text); border-color: var(--trace-inspector-line); }
+.telegram-inspector h2 { border-color: var(--trace-inspector-line); }
 .telegram-overview { margin-bottom: 0.75rem; }
 #telegram-overview { padding: 0.5rem 0.65rem; }
 .telegram-lane { display: grid; grid-template-columns: 4rem minmax(0, 1fr); gap: 0.55rem; align-items: center; padding-block: 0.18rem; color: var(--trace-muted); font: 0.78rem/1.3 ui-monospace, monospace; }
@@ -78,20 +82,24 @@ button[type="button"] { background: transparent; color: var(--accent); }
 #telegram-turns { padding: 0; margin: 0; list-style: none; }
 #telegram-turns > li { border-top: 1px solid var(--line); }
 #telegram-turns button.telegram-span { width: 100%; min-height: 2.35rem; border: 0; border-radius: 0; color: var(--ink); }
-#telegram-turns button.telegram-span:is(:hover, [aria-pressed="true"]) { background: var(--trace-rail); }
+#telegram-turns button.telegram-span:hover { background: var(--trace-rail); }
+#telegram-turns button.telegram-span[aria-pressed="true"] {
+  background: var(--trace-selected);
+  box-shadow: inset 3px 0 var(--trace-pap);
+}
 .telegram-span-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .telegram-span-label.depth-1 { padding-inline-start: 0.68rem; }
 .telegram-span-label.depth-2 { padding-inline-start: 1.4rem; }
-.telegram-span-label small { margin-inline-start: 0.4rem; color: var(--trace-pap); }
+.telegram-span-label small { margin-inline-start: 0.4rem; color: var(--focus); }
 .telegram-span-time { color: var(--trace-muted); text-align: end; white-space: nowrap; }
-.telegram-span-rail { position: relative; height: 0.75rem; border-inline: 1px solid var(--line); background: var(--paper); }
+.telegram-span-rail { position: relative; height: 0.75rem; border-inline: 1px solid var(--line); background: var(--trace-rail); }
 .telegram-bar { position: absolute; inset-block: 0.16rem; min-width: 2px; max-width: 100%; background: var(--trace-tool); border-radius: 1px; }
-.telegram-bar.turn { background: var(--accent); }
+.telegram-bar.turn { background: var(--trace-turn); }
 .telegram-bar.pap { background: var(--trace-pap); }
 .telegram-bar.event { width: 2px; inset-block: 0; transform: translateX(-1px); }
 .telegram-inspector > p, .telegram-inspector dl { margin: 0; padding: 0.7rem 1rem; overflow-wrap: anywhere; }
-.telegram-inspector > p { font: 0.88rem/1.35 ui-monospace, monospace; color: var(--accent); }
-.telegram-inspector dt { font-size: 0.8rem; color: var(--trace-muted); }
+.telegram-inspector > p { font: 0.88rem/1.35 ui-monospace, monospace; color: var(--trace-inspector-accent); }
+.telegram-inspector dt { font-size: 0.8rem; color: var(--trace-inspector-muted); }
 .telegram-inspector dd { margin: 0 0 0.65rem; font-size: 0.9rem; }
 @media (max-width: 50rem) {
   #live-layout:not([hidden]) { grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
