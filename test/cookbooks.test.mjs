@@ -17,7 +17,8 @@ test('cookbooks render navigable articles with code examples and preserve the pr
   assert.match(index, /data-filter/);
   assert.match(index, /placeholder="Search cookbooks"/);
   assert.match(index, /<table class="cookbook-guides" aria-labelledby="runnable-guides">/);
-  assert.match(index, /<th scope="col">Guide<\/th><th scope="col">Topic<\/th>/);
+  assert.match(index, /<th scope="col">Title<\/th><th scope="col">Topics<\/th><th scope="col">Date<\/th>/);
+  assert.equal([...index.matchAll(/<time datetime="2026-11-20">Nov 20, 2026<\/time>/g)].length, 5);
   assert.match(index, /sandbox\.printwithpoppy\.com/);
 
   const articles = [...outputs.keys()].filter((name) => name.endsWith('.html') && !name.endsWith('/index.html'));

@@ -5,12 +5,13 @@ import { escapeHtml as escape } from '../src/report-views.mjs';
 const repository = 'https://github.com/Rhys-Lindmark/poppy/blob/main/';
 const source = 'https://github.com/Rhys-Lindmark/poppy';
 const guides = [
-  { slug: 'personal-agent', topic: 'Agent implementation', proposal: 1 },
-  { slug: 'store-discovery', topic: 'Store implementation', proposal: 13 },
-  { slug: 'direct-sign-in', topic: 'Direct Sign-In', proposal: 15 },
-  { slug: 'delivery-approval', topic: 'Operations 3', proposal: 35 },
-  { slug: 'interoperability', topic: 'Evaluation', proposal: 27 },
+  { slug: 'personal-agent', topic: 'Agent implementation', proposal: 1, added: '2026-11-20' },
+  { slug: 'store-discovery', topic: 'Store implementation', proposal: 13, added: '2026-11-20' },
+  { slug: 'direct-sign-in', topic: 'Direct Sign-In', proposal: 15, added: '2026-11-20' },
+  { slug: 'delivery-approval', topic: 'Operations 3', proposal: 35, added: '2026-11-20' },
+  { slug: 'interoperability', topic: 'Evaluation', proposal: 27, added: '2026-11-20' },
 ];
+const guideDate = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const communities = new Map([
   ['Cliffside Retail', 'https://www.cliffside-retail.com/'],
   ['Poppy Demo Agent', 'https://poppydemoagent.dev/'],
@@ -126,10 +127,11 @@ function index(articles, groups) {
   const topics = groups.map(({ title }) =>
     '<option value="' + anchor(title) + '">' + escape(title) + '</option>').join('');
   const groupByProposal = new Map(groups.flatMap(({ title, entries }) => entries.map(({ id }) => [id, anchor(title)])));
-  const tutorials = articles.map(({ slug, title, topic, description, proposal }) =>
+  const tutorials = articles.map(({ slug, title, topic, description, proposal, added }) =>
     '<tr data-guide data-topic="' + groupByProposal.get(proposal) + '" data-search="' + escape(description) + '">' +
     '<th scope="row"><a href="' + slug + '.html">' + escape(title) + '</a></th>' +
-    '<td><span class="cookbook-topic">' + escape(topic) + '</span></td></tr>').join('');
+    '<td><span class="cookbook-topic">' + escape(topic) + '</span></td>' +
+    '<td><time datetime="' + added + '">' + guideDate.format(new Date(added)) + '</time></td></tr>').join('');
   const proposals = groups.map(({ title, entries }) =>
     '<div class="cookbook-group" data-proposal-group><h3 id="' + anchor(title) + '">' + escape(title) + '</h3>' +
     '<ul>' + entries.map(({ id, label, outcome }) => {
@@ -150,21 +152,22 @@ function index(articles, groups) {
     '<a href="#proposals">50 proposals</a><a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
     '<a href="' + source + '">GitHub</a></nav></div>' +
     '<div class="cookbook-content cookbook-catalog">' +
-    '<section aria-labelledby="runnable-guides" data-guide-section><h2 id="runnable-guides">Runnable guides</h2>' +
+    '<section aria-labelledby="runnable-guides" data-guide-section><h2 id="runnable-guides" class="cookbook-feedback">Runnable guides</h2>' +
     '<table class="cookbook-guides" aria-labelledby="runnable-guides"><thead><tr>' +
-    '<th scope="col">Guide</th><th scope="col">Topic</th></tr></thead><tbody>' + tutorials + '</tbody></table></section>' +
+    '<th scope="col">Title</th><th scope="col">Topics</th><th scope="col">Date</th></tr></thead><tbody>' + tutorials + '</tbody></table></section>' +
     '<section aria-labelledby="proposals" data-proposal-section><h2 id="proposals">Cookbook proposals</h2>' + proposals +
     '<p><a href="https://personalagentprotocol.org/docs/demos">All Poppy community demos</a></p></section></div>';
 }
 
 export function buildCookbooks({ repo, route, write, page }) {
   const articles = guides.map((guide) => readGuide(repo, guide));
-  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=poppy-library-2">' +
+  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=poppy-flat-table">' +
     '<script type="module" src="' + route + '/cookbooks.mjs?v=poppy-library"></script>';
   const pageOptions = { head, bodyClass: 'cookbook-page', active: '/cookbooks/' };
   for (const [index, guide] of articles.entries()) {
     write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide, articles[index - 1], articles[index + 1]), pageOptions));
     write('cookbooks/' + guide.slug + '.md', guide.markdown);
   }
-  write('cookbooks/index.html', page('Personal Agent Protocol cookbooks', index(articles, proposalGroups(repo)), pageOptions));
+  write('cookbooks/index.html', page('Personal Agent Protocol cookbooks', index(articles, proposalGroups(repo)),
+    { ...pageOptions, bodyClass: 'cookbook-page cookbook-index' }));
 }
