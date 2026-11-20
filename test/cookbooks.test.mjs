@@ -13,11 +13,11 @@ test('cookbooks render navigable articles with code examples and preserve the pr
   });
   const index = outputs.get('cookbooks/index.html');
   assert.equal([...index.matchAll(/<li data-proposal>/g)].length, 50);
-  assert.equal([...index.matchAll(/<li data-guide data-topic="[^"]+">/g)].length, 5);
+  assert.equal([...index.matchAll(/<tr data-guide data-topic="[^"]+" data-search="/g)].length, 5);
   assert.match(index, /data-filter/);
   assert.match(index, /placeholder="Search cookbooks"/);
-  assert.match(index, /cookbook-cover\.jpg/);
-  assert.match(index, /class="cookbook-action" href="personal-agent\.html"/);
+  assert.match(index, /<table class="cookbook-guides" aria-labelledby="runnable-guides">/);
+  assert.match(index, /<th scope="col">Guide<\/th><th scope="col">Topic<\/th>/);
   assert.match(index, /sandbox\.printwithpoppy\.com/);
 
   const articles = [...outputs.keys()].filter((name) => name.endsWith('.html') && !name.endsWith('/index.html'));

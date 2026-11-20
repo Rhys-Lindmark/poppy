@@ -256,7 +256,7 @@ write('sponsors.md', sponsors);
 for (const name of ['styles.css', 'tokens.css', 'branding.css', 'hermes-conformance.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
   'agent-simulations.css', 'agent-simulations.mjs',
   'telegram-demo.css', 'telegram-demo.mjs', 'telegram-demo-data.mjs',
-  'cookbook-cover.jpg', 'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
+  'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +

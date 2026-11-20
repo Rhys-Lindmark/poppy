@@ -126,10 +126,10 @@ function index(articles, groups) {
   const topics = groups.map(({ title }) =>
     '<option value="' + anchor(title) + '">' + escape(title) + '</option>').join('');
   const groupByProposal = new Map(groups.flatMap(({ title, entries }) => entries.map(({ id }) => [id, anchor(title)])));
-  const first = articles[0];
   const tutorials = articles.map(({ slug, title, topic, description, proposal }) =>
-    '<li data-guide data-topic="' + groupByProposal.get(proposal) + '"><div><h3><a href="' + slug + '.html">' + escape(title) + '</a></h3><p>' + inline(description) +
-    '</p></div><span>' + escape(topic) + '</span></li>').join('');
+    '<tr data-guide data-topic="' + groupByProposal.get(proposal) + '" data-search="' + escape(description) + '">' +
+    '<th scope="row"><a href="' + slug + '.html">' + escape(title) + '</a></th>' +
+    '<td><span class="cookbook-topic">' + escape(topic) + '</span></td></tr>').join('');
   const proposals = groups.map(({ title, entries }) =>
     '<div class="cookbook-group" data-proposal-group><h3 id="' + anchor(title) + '">' + escape(title) + '</h3>' +
     '<ul>' + entries.map(({ id, label, outcome }) => {
@@ -147,24 +147,20 @@ function index(articles, groups) {
     '<div><label class="cookbook-feedback" for="cookbook-topic">Topic</label><select id="cookbook-topic"><option value="">All topics</option>' +
     topics + '</select></div><p data-count role="status"></p></div>' +
     '<nav class="cookbook-source" aria-label="Cookbook resources">' +
-    '<a href="#runnable-guides">Runnable guides</a><a href="#proposals">50 proposals</a>' +
-    '<a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
+    '<a href="#proposals">50 proposals</a><a href="/poppy/protocol-trace.html#replay">Replay the demo</a>' +
     '<a href="' + source + '">GitHub</a></nav></div>' +
     '<div class="cookbook-content cookbook-catalog">' +
-    '<section class="cookbook-featured" data-featured aria-labelledby="featured-guide">' +
-    '<img src="/poppy/cookbook-cover.jpg" width="960" height="640" alt="">' +
-    '<div><h2 id="featured-guide">' + escape(first.title) + '</h2><p>' + inline(first.description) + '</p>' +
-    '<a class="cookbook-action" href="' + first.slug + '.html" aria-label="Read the guide to build a Personal Agent">Read the guide</a></div></section>' +
     '<section aria-labelledby="runnable-guides" data-guide-section><h2 id="runnable-guides">Runnable guides</h2>' +
-    '<ul class="cookbook-guides">' + tutorials + '</ul></section>' +
+    '<table class="cookbook-guides" aria-labelledby="runnable-guides"><thead><tr>' +
+    '<th scope="col">Guide</th><th scope="col">Topic</th></tr></thead><tbody>' + tutorials + '</tbody></table></section>' +
     '<section aria-labelledby="proposals" data-proposal-section><h2 id="proposals">Cookbook proposals</h2>' + proposals +
     '<p><a href="https://personalagentprotocol.org/docs/demos">All Poppy community demos</a></p></section></div>';
 }
 
 export function buildCookbooks({ repo, route, write, page }) {
   const articles = guides.map((guide) => readGuide(repo, guide));
-  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=recipe-library">' +
-    '<script type="module" src="' + route + '/cookbooks.mjs?v=recipe-library"></script>';
+  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=poppy-library">' +
+    '<script type="module" src="' + route + '/cookbooks.mjs?v=poppy-library"></script>';
   const pageOptions = { head, bodyClass: 'cookbook-page', active: '/cookbooks/' };
   for (const [index, guide] of articles.entries()) {
     write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide, articles[index - 1], articles[index + 1]), pageOptions));
