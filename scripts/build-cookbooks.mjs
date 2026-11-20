@@ -159,7 +159,7 @@ function index(articles, groups) {
 
 export function buildCookbooks({ repo, route, write, page }) {
   const articles = guides.map((guide) => readGuide(repo, guide));
-  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=poppy-library">' +
+  const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css?v=poppy-library-2">' +
     '<script type="module" src="' + route + '/cookbooks.mjs?v=poppy-library"></script>';
   const pageOptions = { head, bodyClass: 'cookbook-page', active: '/cookbooks/' };
   for (const [index, guide] of articles.entries()) {
