@@ -1,0 +1,33 @@
+/* Hallmark · v2.0.0 · shape: app screen · theme: Minimalist · signature: private conversation */
+/* Hallmark · critique: keep the access control visible and move the conversation into view after connect. */
+:root {
+  --font: system-ui, sans-serif;
+  --ink: #202920;
+  --paper: #f9faf4;
+  --input: #fff;
+  --accent: #355126;
+  --border: #7b8774;
+  --line: #d4dcc9;
+  --focus: #975109;
+  color-scheme: light;
+  font: 16px/1.55 var(--font);
+  color: var(--ink);
+  background: var(--paper);
+}
+html, body { overflow-x: clip; }
+main { max-width: 42rem; margin: auto; padding: clamp(1rem, 5vw, 3rem); }
+nav { display: flex; gap: 1rem; font-size: 0.9rem; }
+a { color: var(--accent); text-underline-offset: 0.16em; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; font-weight: 620; overflow-wrap: break-word; }
+label { display: block; font-weight: 620; }
+input, textarea, button { font: inherit; }
+input, textarea { display: block; box-sizing: border-box; width: 100%; margin: 0.4rem 0 0.8rem; padding: 0.55rem; background: var(--input); border: 1px solid var(--border); border-radius: 0.25rem; }
+textarea { resize: vertical; }
+button { background: var(--accent); color: var(--input); padding: 0.4rem 0.7rem; border-radius: 0.25rem; border: 1px solid var(--accent); min-height: 2.75rem; cursor: pointer; }
+button:disabled { opacity: 0.65; cursor: wait; }
+button[type="button"] { background: transparent; color: var(--accent); }
+#disconnect { margin-top: 1.1rem; }
+#messages { list-style: none; padding: 0; }
+#messages li { border-bottom: 1px solid var(--line); padding: 0.8rem 0; }
+#messages p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0.2rem 0 0; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }

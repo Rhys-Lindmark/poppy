@@ -107,6 +107,9 @@ export function poppyvalMarkup(evidence) {
   }).join('');
 
   return reportHeading('PoppyVal', 'Versioned capability results for Personal Agents and Companies.') +
+    (evidence.hermes ? '<section><h2>Poppy on Hermes</h2><p>Commonplace returned HTTP ' +
+      escape(evidence.hermes.request.status) + ' for the signed PAP guest request from Hermes. ' +
+      '<a href="hermes-conformance.html">See what Hermes and the sandbox verified</a>.</p></section>' : '') +
     '<section><h2>Bundled Poppy 1.0 HTTPS sandbox</h2><ul>' +
     evidence.checks.map(({ check, outcome }) => '<li>' + escape(check) + ' · ' + resultLabels[outcome] + '</li>').join('') +
     '</ul><p><a href="protocol-trace.html">Recorded delivery workflow</a></p></section>' +

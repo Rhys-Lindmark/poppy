@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Message Poppy</title>
+  <link rel="stylesheet" href="/hermes-chat.css">
+  <script type="module" src="/hermes-chat.mjs"></script>
+</head>
+<body>
+  <main>
+    <nav aria-label="Poppy"><a href="https://ai.rhyslindmark.com/poppy/">Poppy</a> <a href="https://ai.rhyslindmark.com/poppy/hermes-conformance">PAP conformance</a></nav>
+    <h1>Message Poppy</h1>
+    <form id="connect">
+      <label for="key">Poppy access key</label>
+      <input id="key" type="password" maxlength="128" required autocomplete="current-password" spellcheck="false">
+      <button>Connect to Hermes</button>
+    </form>
+    <p id="status" role="status"></p>
+    <section id="conversation" aria-label="Conversation" hidden>
+      <ol id="messages" role="log" aria-label="Messages"></ol>
+      <form id="send">
+        <label for="message">Message</label>
+        <textarea id="message" rows="3" maxlength="6000" required></textarea>
+        <button id="submit">Send</button>
+        <button id="stop" type="button" hidden>Stop task</button>
+      </form>
+      <button id="disconnect" type="button">Disconnect</button>
+    </section>
+  </main>
+</body>
+</html>

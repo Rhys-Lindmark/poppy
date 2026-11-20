@@ -1,11 +1,13 @@
-import { mkdirSync, readFileSync, writeFileSync, copyFileSync, cpSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, cpSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import edition from '../data/commonplace-edition.json' with { type: 'json' };
+import hermesIdentity from '../data/hermes-agent-identity.json' with { type: 'json' };
 import storeResults from '../data/storefront-results.json' with { type: 'json' };
 import { coverageMarkup, escapeHtml as escape, poppyvalMarkup, reportHeading } from '../src/report-views.mjs';
 import { traceTable } from '../src/views.mjs';
+import { hermesConformanceMarkup } from '../src/hermes-conformance.mjs';
 import { buildCookbooks } from './build-cookbooks.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
@@ -18,6 +20,10 @@ const write = (path, value) => writeFileSync(join(site, path), value);
 const json = (path, value) => write(path, JSON.stringify(value, null, 2) + '\n');
 const siteOrigin = 'https://ai.rhyslindmark.com';
 const route = '/poppy';
+const ownerOrigin = process.env.POPPY_OWNER_ORIGIN ? new URL(process.env.POPPY_OWNER_ORIGIN) : null;
+if (ownerOrigin && (ownerOrigin.protocol !== 'https:' || ownerOrigin.href !== ownerOrigin.origin + '/')) {
+  throw new Error('POPPY_OWNER_ORIGIN must be an HTTPS origin.');
+}
 const protocolDocs = 'https://personalagentprotocol.org/docs/introduction';
 const links = [
   ['/agent', 'Message the agent'],
@@ -61,12 +67,21 @@ const openAPI = {
 };
 json('openapi.json', openAPI);
 json('api/edition.json', edition);
+json('hermes-agent.json', hermesIdentity.metadata);
+json('hermes-jwks.json', hermesIdentity.jwks);
+const hermesEvidencePath = join(repo, 'data/hermes-pap-evidence.json');
+const hermesEvidence = existsSync(hermesEvidencePath) ? JSON.parse(readFileSync(hermesEvidencePath, 'utf8')) : null;
+if (hermesEvidence) json('hermes-pap-evidence.json', hermesEvidence);
+write('hermes-conformance.html', page('How Hermes uses PAP', hermesConformanceMarkup(hermesEvidence), {
+  head: '<link rel="stylesheet" href="/poppy/hermes-conformance.css">',
+}));
 
 write('index.html', page('Personal Agent Protocol demo',
   '<section class="brand-hero" aria-labelledby="protocol"><div class="site-wrap"><h1 id="protocol">Personal Agent Protocol</h1>' +
   '<p class="brand-intro">An open protocol for every company and every personal agent.</p>' +
-  '<div class="site-links"><a class="site-button" href="/poppy/agent">Message the agent</a>' +
+  '<div class="site-links"><a class="site-button" href="' + (ownerOrigin ? '/poppy/hermes">Message Hermes' : '/poppy/agent">Message the agent') + '</a>' +
   '<a href="#commonplace-demo">Try the Commonplace demo</a>' +
+  '<a href="/poppy/hermes-conformance">See how Hermes uses PAP</a>' +
   '<a href="/poppy/cookbooks/">Browse the cookbooks</a></div></div></section>' +
   '<section class="site-band" id="commonplace-demo" aria-labelledby="commonplace-title"><div class="site-wrap site-demo-layout">' +
   '<div><h2 id="commonplace-title">Commonplace store demo</h2><p>Prepare a reading edition from the ' +
@@ -86,9 +101,28 @@ write('index.html', page('Personal Agent Protocol demo',
   { head: '<script type="module" src="/poppy/commonplace-demo.mjs"></script>', bodyClass: 'poppy-home', active: '/' }));
 
 const agentStyle = '<link rel="stylesheet" href="/poppy/agent-chat.css">';
+if (ownerOrigin) {
+  write('hermes.html', page('Message Hermes',
+    reportHeading('Message Hermes', 'Rhys’s private Poppy agent runs on his DigitalOcean Docker host.') +
+    '<p><a class="site-button" href="' + escape(ownerOrigin.href) + '" rel="noreferrer">Open private Hermes chat</a></p>' +
+    '<p>On the Mac with the configured Hermes SSH connection, run <code>npm run ask -- --copy-access-key</code> ' +
+    'from the Poppy source directory. Paste the key into the private chat to connect.</p>' +
+    '<section class="agent-siri"><h2>Use Hermes with Siri</h2><ol>' +
+    '<li>Create a shortcut named <strong>Ask Hermes</strong>. Add <strong>Dictate Text</strong>.</li>' +
+    '<li>Add <strong>Get Contents of URL</strong> for <code>' + escape(ownerOrigin.origin + '/message') + '</code>. ' +
+    'Choose <strong>POST</strong> and set the JSON field <code>message</code> to <strong>Dictated Text</strong>.</li>' +
+    '<li>Set the <code>Authorization</code> header to <code>Bearer YOUR_ACCESS_KEY</code>. Keep this shortcut private.</li>' +
+    '<li>Get <code>run_url</code> from the response with <strong>Get Dictionary Value</strong> and pass it to <strong>Open URLs</strong>. ' +
+    'Sign in to see the reply as Hermes works.</li></ol>' +
+    '<p><a href="https://support.apple.com/guide/shortcuts/apd07c25bb38/ios">Apple’s Siri Shortcuts guide</a></p></section>' +
+    '<p><a href="/poppy/hermes-conformance">See how Hermes uses PAP</a> · <a href="/poppy/agent">Try the public Commonplace demo</a></p>',
+    { head: agentStyle, bodyClass: 'site-report poppy-agent' }));
+}
 write('agent.html', page('Message the Poppy agent',
   reportHeading('Message the Poppy agent', 'Ask Poppy to find a free reading edition from Commonplace or explain what’s in it.') +
-  '<div class="agent-links"><a href="/poppy/siri">Use with Siri</a></div>' +
+  '<div class="agent-links">' + (ownerOrigin ? '<a href="/poppy/hermes">Open private Hermes</a> · ' : '') +
+  '<a href="/poppy/siri">Use the Commonplace demo with Siri</a> · ' +
+  '<a href="/poppy/hermes-conformance">See how Hermes uses PAP</a></div>' +
   '<ol id="agent-messages" class="agent-messages" role="log" aria-label="Conversation" tabindex="0">' +
   '<li><strong>Poppy</strong><p>What would you like to read? Try “Find me a reading edition.”</p></li></ol>' +
   '<form class="agent-form" id="agent-form" method="post" action="/poppy/api/message"><label for="agent-message">Message Poppy</label>' +
@@ -162,7 +196,7 @@ write('sponsors.html', page('Hackathon sponsors',
   '<p class="note"><a href="/poppy/sponsors.md">Setup instructions</a></p>', { active: '/sponsors' }));
 write('sponsors.md', sponsors);
 
-for (const name of ['styles.css', 'tokens.css', 'branding.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
+for (const name of ['styles.css', 'tokens.css', 'branding.css', 'hermes-conformance.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
   'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {

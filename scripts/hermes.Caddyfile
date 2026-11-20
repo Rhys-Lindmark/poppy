@@ -1,0 +1,32 @@
+{
+	admin off
+	auto_https disable_redirects
+}
+
+https://{$POPPY_PUBLIC_IP} {
+	tls force_automate {
+		issuer acme {
+			profile shortlived
+			disable_http_challenge
+		}
+	}
+	header {
+		Cache-Control "no-store"
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+	handle /message {
+		request_body {
+			max_size 24KB
+		}
+		reverse_proxy 127.0.0.1:8652
+	}
+	@chat path / /hermes-chat.css /hermes-chat.mjs
+	handle @chat {
+		root * /srv
+		file_server
+	}
+	respond 404
+}

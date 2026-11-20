@@ -2,7 +2,16 @@
 
 [Public Poppy demo with Commonplace](https://ai.rhyslindmark.com/poppy/).
 
-[Message the Poppy agent](https://ai.rhyslindmark.com/poppy/agent) or [set up Ask Poppy in Siri](https://ai.rhyslindmark.com/poppy/siri). Both use the public Commonplace workflow. The chat accepts requests to find an edition or ask about its price, format, and sources. The browser handles approval and download.
+[Message the Poppy Commonplace demo](https://ai.rhyslindmark.com/poppy/agent) or [set up its Siri Shortcut](https://ai.rhyslindmark.com/poppy/siri). The browser handles edition approval and download.
+
+Rhys's private Poppy uses the Hermes Agent installed on the Docker server. From a checkout with access to the `hermes` SSH alias, use either of these commands:
+
+```sh
+npm run ask -- "Find me a Commonplace reading edition using the Poppy PAP tool"
+npm run ask -- --run RUN_ID
+```
+
+The first command starts an authenticated Hermes task. The second checks its progress. [Private chat and Siri setup](https://ai.rhyslindmark.com/poppy/hermes) · [PAP conformance visualization](https://ai.rhyslindmark.com/poppy/hermes-conformance) · [Hermes PAP capabilities and verification](docs/hermes-pap.md).
 
 A local Poppy 1.0 Personal Agent and store. The sandbox demonstrates discovery and signed delivery requests, scoped Direct Sign-In, and approval of exact terms using Operations 3.
 
