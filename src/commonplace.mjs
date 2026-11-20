@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { editionBackup } from '../public/commonplace-client.mjs';
 import { companyOrigin, readProposal } from '../public/commonplace-agent.mjs';
 
-export async function prepareEdition({ approve, origin = companyOrigin, fetcher = fetch } = {}) {
+export async function prepareEdition({ approve, origin = companyOrigin, fetcher } = {}) {
   const { revision, terms, requests } = await readProposal(origin, fetcher);
   if (approve !== undefined && approve !== revision) {
     return { status: 'terms_changed', revision, terms, requests };

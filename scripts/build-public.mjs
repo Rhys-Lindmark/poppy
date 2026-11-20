@@ -51,14 +51,15 @@ const discovery = {
   web: {},
 };
 writeFileSync(join(output, '.well-known/poppy.json'), JSON.stringify(discovery, null, 2) + '\n');
-json('openapi.json', {
+const openAPI = {
   openapi: '3.1.0', info: { title: 'Commonplace edition catalog', version: '1.0.0' },
   servers: [{ url: siteOrigin }],
   paths: { [route + '/api/edition.json']: { get: { operationId: 'getCommonplaceEdition',
     summary: 'Read the public terms and source selections for a Commonplace edition',
     responses: { 200: { description: 'Commonplace reading edition' } },
   } } },
-});
+};
+json('openapi.json', openAPI);
 json('api/edition.json', edition);
 
 write('index.html', page('Personal Agent Protocol demo',
@@ -176,18 +177,24 @@ for (const filename of ['src/chat-http.mjs', 'public/commonplace-agent.mjs', 'pu
   mkdirSync(dirname(target), { recursive: true });
   copyFileSync(join(repo, filename), target);
 }
+writeFileSync(join(functions, '_poppy/company-documents.mjs'), 'export const companyDocuments = ' +
+  JSON.stringify({ '/poppy/openapi.json': openAPI, '/poppy/api/edition.json': edition }, null, 2) + ';\n');
 const agentRoute = join(functions, 'poppy/api');
 mkdirSync(agentRoute, { recursive: true });
 writeFileSync(join(agentRoute, 'message.js'), `import { companyOrigin, handleAgentMessage } from '../../_poppy/src/chat-http.mjs';
+import { companyDocuments } from '../../_poppy/company-documents.mjs';
 import { poppyDiscovery } from '../../_lib/poppy-discovery.js';
 
 export function onRequest(context) {
   if (new URL(context.request.url).origin !== companyOrigin) {
     return new Response(null, { status: 404 });
   }
-  return handleAgentMessage(context.request, (url, options) => {
+  return handleAgentMessage(context.request, (url) => {
     if (url === companyOrigin + '/.well-known/poppy.json') return Response.json(poppyDiscovery);
-    return context.env.ASSETS.fetch(new Request(url, options));
+    const path = new URL(url).pathname;
+    return Object.hasOwn(companyDocuments, path)
+      ? Response.json(companyDocuments[path])
+      : new Response(null, { status: 404 });
   });
 }
 `);
