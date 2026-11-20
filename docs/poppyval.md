@@ -48,6 +48,8 @@ The Census Bureau’s November 2026 time series puts calendar 2025 U.S. retail e
 
 [Sales coverage](https://ai.rhyslindmark.com/poppy/coverage.html) shows the 16 storefronts in the named cohort. Five published a recognizable Poppy manifest and 11 returned HTTP 404. The count is for this cohort. Etsy’s 0.3 manifest accounts for approximately $7.74B in 2025 U.S. sales, or 0.62% of the Census denominator, among observed publishing merchants with a measured direct weight. This uses Etsy marketplace GMS of $10.46B and a 74% share from U.S. buyers. Amazon, Walmart, and Target together account for approximately $560.7B in the HTTP 404 group. The Shopify rollout proxy stays outside both named-store totals. [Etsy 10-K](https://investors.etsy.com/sec-filings/all-sec-filings/content/0001370637-26-000019/etsy-20251231.htm)
 
+PAP Checker reported 10,814 publishing domains on November 20, including 7,443 Wix and 3,271 Shopify domains. Its directory covers websites and storefronts that it has observed. [PAP Checker directory](https://papchecker.com/sites)
+
 Refresh the named cohort without overwriting the committed snapshot.
 
 ```sh
@@ -62,6 +64,8 @@ node validate/index.ts check https://ai.rhyslindmark.com --only openapi. --json
 ```
 
 The [Stacktree simulator](https://poppy-simulator.stacktr.ee/) passed the 1.0 document, version, and organization checks. It flagged HTTP 404 at the protected resource metadata endpoint. [Section 3.2](https://personalagentprotocol.org/docs/1.0/spec#32-oauth-server) permits that response for a Company with no issuer and signed-out access. This run exercised discovery only.
+
+On the same date, the Poppy Demo Agent validator accepted Commonplace 1.0. It also accepted the hosted agent’s separately fetched client metadata and JWKS as 1.0 documents when submitted as pasted JSON. The hosted validator’s own fetch of its client URL returned HTTP 522, while independent downloads of both public documents returned 200. The agent’s signed workflow remains untested by PoppyVal. [Hosted validator](https://poppydemoagent.dev/validator?url=ai.rhyslindmark.com)
 
 In a scratch directory, install [Datalayer's TypeScript SDK](https://github.com/datalayer/personal-agent-protocol) at version 0.37.5 and call its published discovery method.
 

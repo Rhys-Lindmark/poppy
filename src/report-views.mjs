@@ -21,6 +21,10 @@ function storeObservation(store) {
 export function coverageMarkup(resultsPath) {
   const escape = escapeHtml;
   const byName = new Map(scan.stores.map((store) => [store.name, store]));
+  const directory = scan.directory;
+  const number = (value) => value.toLocaleString('en-US');
+  const platforms = Object.entries(directory.platformDomains)
+    .map(([name, count]) => number(count) + ' on ' + escape(name)).join(' and ');
   const dollars = (amount) => '$' + amount.toLocaleString('en-US', { maximumFractionDigits: 2 }) + 'B';
   const { denominatorBillions, namedMerchantSalesWithPublicDiscovery: covered,
     namedMerchantSalesReturning404: missing, platformProxy, totals } = scan.summary;
@@ -56,7 +60,11 @@ export function coverageMarkup(resultsPath) {
     'The figures describe sales at these sites and public discovery. Live sessions and Poppy-initiated purchases have their own evidence requirements.</p>' +
     '<table class="coverage"><caption>Sales weights</caption><thead><tr><th scope="col">Retailer or platform</th>' +
     '<th scope="col">Online sales</th><th scope="col">Public discovery</th></tr></thead><tbody>' + tradeRows +
-    '</tbody></table></section><section><h2>Storefront checks</h2><table class="coverage">' +
+    '</tbody></table></section><section><h2>Directory count</h2><p><strong>' +
+    number(directory.publishingDomains) + ' publishing domains</strong> in PAP Checker’s directory on <time datetime="' +
+    escape(directory.observedOn) + '">' + escape(directory.observedOn) + '</time>, including ' + platforms +
+    '. The directory includes websites and storefronts. <a href="' + escape(directory.source) +
+    '">PAP Checker directory</a></p></section><section><h2>Storefront checks</h2><table class="coverage">' +
     '<caption>Public GET requests on <time datetime="' + escape(scan.checkedAt) + '">' + escape(date) + '</time>.</caption>' +
     '<thead><tr><th scope="col">Store</th><th scope="col">Discovery</th><th scope="col">Advertised channels</th></tr></thead>' +
     '<tbody>' + cohortRows + '</tbody></table><p class="note"><a href="' + escape(resultsPath) +
@@ -65,7 +73,7 @@ export function coverageMarkup(resultsPath) {
 
 const resultLabels = {
   pass: 'Pass', fail: 'Fail', unsupported: 'Version unsupported', unavailable: 'Unavailable',
-  untested: 'Untested', vendor_claim: 'Vendor report', source_evidence: 'Source evidence',
+  untested: 'Untested', vendor_claim: 'Vendor report', metadata_pass: 'Published identity passed',
 };
 
 export function poppyvalMarkup(evidence) {
@@ -89,7 +97,9 @@ export function poppyvalMarkup(evidence) {
       'Signed session ' + resultLabels[company.signedSession].toLowerCase() + '. ' +
       'Direct Sign-In and Operations approval ' + resultLabels[company.directSignIn].toLowerCase() + '. ' +
       '<a href="' + escape(company.manifest) + '">Manifest</a> · <a href="' + escape(company.source) +
-      '">Official Company validator</a></li>';
+      '">Official Company validator</a>' +
+      (company.independentValidation ? ' · <a href="' + escape(company.independentValidation.source) +
+        '">Poppy Demo Agent validator</a> also passed discovery.' : '') + '</li>';
   }).join('');
 
   return '<h1>PoppyVal</h1><p>Versioned capability results for Personal Agents and Companies.</p>' +

@@ -150,7 +150,8 @@ export async function scanCohort({ cohort = defaultCohort, market = defaultMarke
   }));
   return {
     checkedAt: date.toISOString(), market: market.market, marketSource: market.marketSource,
-    cohortSource: cohort.source, groups: cohort.groups, summary: summarizeCoverage(results, market), stores: results,
+    cohortSource: cohort.source, directory: cohort.directory, groups: cohort.groups,
+    summary: summarizeCoverage(results, market), stores: results,
   };
 }
 

@@ -1,5 +1,14 @@
 {
   "source": "https://papchecker.com/sites",
+  "directory": {
+    "source": "https://papchecker.com/sites",
+    "observedOn": "2026-11-20",
+    "publishingDomains": 10814,
+    "platformDomains": {
+      "Wix": 7443,
+      "Shopify": 3271
+    }
+  },
   "groups": {
     "merchant": "Major U.S. retail storefronts and marketplaces",
     "platform_sample": "Shopify-hosted storefront examples",
