@@ -106,7 +106,7 @@ if (ownerOrigin) {
   const telegramView = new URL(ownerOrigin);
   telegramView.searchParams.set('view', 'telegram');
   write('telegram-trace.html', page('RhysBot Telegram stack trace',
-    reportHeading('RhysBot Telegram stack trace', 'Keep this tab open while you chat with RhysBot in Telegram. The private trace nests tool calls and PAP requests under each turn.') +
+    reportHeading('RhysBot Telegram stack trace', 'Keep this tab open while you chat with RhysBot in Telegram. Browse each turn as a waterfall and select a span to inspect tool calls, timing, and PAP evidence.') +
     '<p><a class="site-button" href="' + escape(telegramView.href) + '" rel="noreferrer">Open Telegram stack trace</a></p>' +
     '<p>Sign in with your Poppy access key. From the Poppy checkout on your Mac, run <code>npm run ask -- --copy-access-key</code> to copy it.</p>' +
     '<p><a href="/poppy/hermes">Hermes web chat</a></p>'));

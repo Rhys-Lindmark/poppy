@@ -15,9 +15,16 @@ const telegramMode = new URL(location.href).searchParams.get('view') === 'telegr
 const telegram = document.querySelector('#telegram-trace');
 const telegramStatus = document.querySelector('#telegram-status');
 const telegramTurns = document.querySelector('#telegram-turns');
+const telegramSelect = document.querySelector('#telegram-turn');
+const telegramWorkspace = document.querySelector('#telegram-workspace');
+const telegramTicks = document.querySelector('#telegram-ticks');
+const telegramOverview = document.querySelector('#telegram-overview');
+const spanName = document.querySelector('#telegram-span-name');
+const spanDetails = document.querySelector('#telegram-span-details');
 if (telegramMode) {
-  document.querySelector('h1').textContent = 'Telegram stack trace';
-  document.title = 'RhysBot Telegram stack trace';
+  document.body.classList.add('telegram-view');
+  document.querySelector('h1').textContent = 'RhysBot trace explorer';
+  document.title = 'RhysBot trace explorer';
   document.querySelector('a[href="/?view=telegram"]').setAttribute('aria-current', 'page');
 }
 let key = '';
@@ -29,49 +36,143 @@ let pending;
 let traceKey;
 let displayedRun;
 let telegramKey;
+let telegramHistory = [];
+let selectedSpan;
+
+const clock = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString([], {
+  hour: 'numeric', minute: '2-digit', second: '2-digit',
+});
+
+function duration(seconds) {
+  if (!Number.isFinite(seconds)) return 'Event';
+  return seconds < 1 ? Math.round(seconds * 1000) + ' ms' : seconds.toFixed(2) + ' s';
+}
+
+function inspectSpan(span, origin) {
+  selectedSpan = span.id;
+  spanName.textContent = span.title;
+  spanDetails.replaceChildren();
+  const fields = {
+    Status: span.state, Source: span.source,
+    'Start offset': Number.isFinite(span.start) ? duration(Math.max(0, span.start - origin)) : 'Unrecorded',
+    Duration: span.end > span.start ? duration(span.end - span.start) : 'Unrecorded',
+    ...span.fields,
+  };
+  for (const [label, value] of Object.entries(fields)) {
+    const term = document.createElement('dt');
+    const valueEl = document.createElement('dd');
+    term.textContent = label;
+    valueEl.textContent = value;
+    spanDetails.append(term, valueEl);
+  }
+  for (const row of telegramTurns.querySelectorAll('button')) row.setAttribute('aria-pressed', String(row.dataset.span === span.id));
+}
+
+function drawTiming(rail, span, origin, scale) {
+  if (!Number.isFinite(span.start)) return;
+  const marker = document.createElement('span');
+  const interval = span.end > span.start;
+  marker.className = 'telegram-bar ' + span.kind + (interval ? '' : ' event');
+  marker.style.left = `${Math.min(100, Math.max(0, (span.start - origin) / scale * 100))}%`;
+  if (interval) marker.style.width = `${(span.end - span.start) / scale * 100}%`;
+  rail.append(marker);
+}
+
+function paintTelegram() {
+  const turn = telegramHistory.find(({ id }) => String(id) === telegramSelect.value) ?? telegramHistory[0];
+  telegramWorkspace.hidden = !turn;
+  if (!turn) return;
+  const turnPrefix = String(turn.id) + ':';
+  const spans = [{ id: turnPrefix + 'turn', title: 'Telegram → Hermes', depth: 0, kind: 'turn', start: turn.timestamp,
+    end: turn.reply?.timestamp, state: turn.reply ? 'Reply recorded' : 'Turn observed', source: 'Hermes session history',
+    fields: { 'Input format': 'Text', 'Input characters': turn.characters ?? 0, 'Tool calls': turn.tools.length } }];
+  for (const [index, tool] of turn.tools.entries()) {
+    const name = tool.name === 'mcp__poppy_pap__prepare_commonplace_edition' ? 'prepare_commonplace_edition' : tool.name;
+    const prefix = turnPrefix + index;
+    spans.push({ id: prefix, title: name, kind: tool.pap ? 'pap' : 'tool', depth: 1,
+      start: tool.timestamp, end: tool.ended_at, state: tool.state, source: 'Hermes tool history',
+      fields: tool.pap ? { Protocol: 'PAP 1.0', Company: tool.pap.company, Identity: tool.pap.client_id,
+        Session: 'Delegated ES256 · signed guest request', 'Catalog response': 'HTTP 200' } : {} });
+    if (!tool.pap) continue;
+    for (const [j, req] of (tool.pap.requests ?? [tool.pap]).entries()) {
+      const status = req.status ?? req.http_status;
+      const signed = req.path === tool.pap.path;
+      spans.push({ id: prefix + ':' + j, title: `${req.method} ${req.path}`, depth: 2, kind: 'pap',
+        start: req.started_at, end: req.ended_at, state: `HTTP ${status}`, source: 'Commonplace tool receipt',
+        fields: { Company: tool.pap.company, Protocol: 'PAP 1.0', ...(signed && { Session: 'Delegated ES256 · signed guest' }) } });
+    }
+  }
+  if (turn.reply) spans.push({ id: turnPrefix + 'reply', title: 'Hermes → Telegram', kind: 'turn', depth: 1,
+    start: turn.reply.timestamp, state: 'Reply recorded', source: 'Hermes session history',
+    fields: { 'Reply format': 'Text', Characters: turn.reply.characters } });
+
+  const origin = turn.timestamp;
+  const spanScale = Math.max(0.2, ...spans.flatMap((span) => [span.start, span.end]).filter(Number.isFinite).map((t) => t - origin));
+  telegramOverview.replaceChildren();
+  for (const [depth, title] of ['Turn', 'Tools', 'PAP'].entries()) {
+    const lane = document.createElement('div');
+    const label = document.createElement('span');
+    const rail = document.createElement('span');
+    lane.className = 'telegram-lane';
+    label.textContent = title;
+    rail.className = 'telegram-span-rail';
+    for (const span of spans) if (span.depth === depth) drawTiming(rail, span, origin, spanScale);
+    lane.append(label, rail);
+    telegramOverview.append(lane);
+  }
+  telegramTicks.replaceChildren();
+  for (let mark = 0; mark <= 4; mark++) {
+    const tick = document.createElement('span');
+    tick.textContent = mark ? duration(mark * spanScale / 4) : '0';
+    telegramTicks.append(tick);
+  }
+  telegramTurns.replaceChildren();
+  for (const span of spans) {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    const label = document.createElement('span');
+    const rail = document.createElement('span');
+    const elapsed = document.createElement('span');
+    const timed = Number.isFinite(span.start);
+    const interval = timed && span.end > span.start;
+    button.type = 'button';
+    button.dataset.span = span.id;
+    button.className = 'telegram-span';
+    label.className = 'telegram-span-label depth-' + span.depth;
+    label.textContent = span.title;
+    label.title = span.title;
+    if (span.kind === 'pap') {
+      const tag = document.createElement('small');
+      tag.textContent = 'PAP';
+      label.append(tag);
+    }
+    rail.className = 'telegram-span-rail';
+    rail.setAttribute('aria-hidden', 'true');
+    drawTiming(rail, span, origin, spanScale);
+    elapsed.className = 'telegram-span-time';
+    elapsed.textContent = interval ? duration(span.end - span.start) : timed ? 'Event' : '—';
+    button.append(label, rail, elapsed);
+    button.addEventListener('click', () => inspectSpan(span, origin));
+    item.append(button);
+    telegramTurns.append(item);
+  }
+  inspectSpan(spans.find(({ id }) => id === selectedSpan) ?? spans[0], origin);
+}
 
 function renderTelegram(turns) {
   const version = JSON.stringify(turns);
   if (version === telegramKey) return;
   telegramKey = version;
-  const expanded = new Map([...telegramTurns.querySelectorAll('details')].map((el) => [el.dataset.frame, el.open]));
-  const frame = (parent, key, title, open) => {
-    const item = document.createElement('li');
-    const detail = document.createElement('details');
-    const summary = document.createElement('summary');
-    const children = document.createElement('ol');
-    detail.dataset.frame = key;
-    detail.open = expanded.get(key) ?? open;
-    summary.textContent = title;
-    detail.append(summary, children);
-    item.append(detail);
-    parent.append(item);
-    return children;
-  };
-  const line = (parent, title) => {
-    const child = document.createElement('li');
-    child.textContent = title;
-    parent.append(child);
-  };
-  telegramTurns.replaceChildren();
-  for (const [position, turn] of turns.entries()) {
-    const time = new Date(turn.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-    const state = turn.reply ? 'Reply recorded' : turn.tools.length ? 'Tool activity' : 'Message recorded';
-    const user = frame(telegramTurns, String(turn.id), `${time} · Telegram → Hermes · ${state}`, position === 0);
-    line(user, `User message · text · ${turn.characters ?? 0} characters`);
-    for (const [index, tool] of turn.tools.entries()) {
-      const name = tool.name === 'mcp__poppy_pap__prepare_commonplace_edition' ? 'prepare_commonplace_edition' : tool.name;
-      const label = `${name} · ${tool.state}${tool.pap ? ' · PAP 1.0' : ''}`;
-      if (!tool.pap) { line(user, label); continue; }
-      const children = frame(user, `${turn.id}-${index}`, label, position === 0);
-      for (const req of tool.pap.requests ?? [tool.pap]) {
-        line(children, `${req.method} ${req.path} → HTTP ${req.status ?? req.http_status}`);
-      }
-      line(children, 'Signed guest Session · delegated ES256 · Commonplace returned HTTP 200');
-    }
-    if (turn.reply) line(user, `Hermes → Telegram · reply recorded · ${turn.reply.characters} characters`);
-  }
+  telegramHistory = turns;
+  const selection = telegramSelect.value;
+  const latest = new Option('Latest turn', '');
+  const recent = turns.map((turn) => new Option(clock(turn.timestamp) + ` · ${turn.tools.length} tools`, String(turn.id)));
+  telegramSelect.replaceChildren(latest, ...recent);
+  telegramSelect.value = turns.some(({ id }) => String(id) === selection) ? selection : '';
+  paintTelegram();
 }
+
+telegramSelect.addEventListener('change', paintTelegram);
 
 async function trackTelegram(currentGeneration = generation) {
   if (currentGeneration !== generation) return;
@@ -299,6 +400,8 @@ document.querySelector('#telegram-disconnect').addEventListener('click', () => {
   clearTimeout(timer);
   key = '';
   telegramKey = undefined;
+  telegramHistory = [];
+  selectedSpan = undefined;
   telegramTurns.replaceChildren();
   telegramStatus.textContent = '';
   telegram.hidden = true;

@@ -84,7 +84,10 @@ test('the web stack trace shows only the configured Telegram DM and attaches pro
   assert.equal(before.turns.length, 1);
   assert.deepEqual(before.turns[0].tools, [{ name: papTool, state: 'Called', timestamp: 11 }]);
   const proof = { protocol_version: '1.0', client_id: 'https://ai.rhyslindmark.com/poppy/hermes-agent.json',
-    signed_requests: [{ method: 'GET', path: '/poppy/api/edition.json', status: 200 }], token: 'private tool output' };
+    signed_requests: [{ method: 'GET', path: '/poppy/api/edition.json', status: 200 }], token: 'private tool output',
+    trace: [['/.well-known/oauth-protected-resource', 404], ['/.well-known/poppy.json', 200],
+      ['/poppy/openapi.json', 200], ['/poppy/api/edition.json', 200]].map(([path, status], i) =>
+      ({ method: 'GET', path, status, started_at: 11.2 + i * 0.3, ended_at: i === 0 ? 1 : 11.3 + i * 0.3 })) };
   append.run('owner', 'tool', papTool, 'fixture_call', null, null, 13, JSON.stringify({ result: proof }));
   append.run('owner', 'assistant', null, null, null, 'stop', 14, 'private reply');
   append.run('owner', 'user', null, null, null, null, 15, 'new private prompt');
@@ -95,5 +98,8 @@ test('the web stack trace shows only the configured Telegram DM and attaches pro
   const [current, previous] = JSON.parse(body).turns;
   assert.deepEqual(current.tools, []);
   assert.equal(previous.tools[0].pap.http_status, 200);
+  assert.equal(previous.tools[0].ended_at, 13);
+  assert.equal(previous.tools[0].pap.requests[0].ended_at, undefined);
+  assert.ok(previous.tools[0].pap.requests[3].ended_at > previous.tools[0].pap.requests[3].started_at);
   assert.equal(previous.reply.characters, 13);
 });

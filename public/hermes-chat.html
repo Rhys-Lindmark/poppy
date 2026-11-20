@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Message Poppy</title>
-  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-stack">
-  <script type="module" src="/hermes-chat.mjs?v=telegram-stack"></script>
+  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-waterfall">
+  <script type="module" src="/hermes-chat.mjs?v=telegram-waterfall"></script>
 </head>
 <body>
   <main>
@@ -20,7 +20,19 @@
     <p id="status" role="status"></p>
     <section id="telegram-trace" aria-label="RhysBot Telegram stack trace" hidden>
       <div class="telegram-toolbar"><p id="telegram-status" role="status"></p><button id="telegram-disconnect" type="button">Disconnect</button></div>
-      <ol id="telegram-turns"></ol>
+      <div class="telegram-controls"><label for="telegram-turn">Turn</label><select id="telegram-turn"><option value="">Latest turn</option></select></div>
+      <div id="telegram-workspace" class="telegram-workspace" hidden>
+        <div><section aria-labelledby="overview-title" class="telegram-waterfall telegram-overview">
+          <h2 id="overview-title">Timing overview</h2><div id="telegram-overview" aria-hidden="true"></div>
+        </section><section aria-labelledby="waterfall-title" class="telegram-waterfall">
+          <h2 id="waterfall-title">Waterfall</h2>
+          <div class="telegram-axis"><span>Span</span><div id="telegram-ticks" aria-hidden="true"></div><span>Time</span></div>
+          <ol id="telegram-turns" aria-label="Spans"></ol>
+        </section></div>
+        <aside class="telegram-inspector" aria-labelledby="span-heading"><h2 id="span-heading">Span details</h2>
+          <p id="telegram-span-name"></p><dl id="telegram-span-details"></dl>
+        </aside>
+      </div>
     </section>
     <div id="live-layout" hidden><section id="conversation" aria-label="Conversation">
       <ol id="messages" role="log" aria-label="Messages"></ol>

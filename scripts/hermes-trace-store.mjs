@@ -26,7 +26,11 @@ export function readPapReceipt(content) {
       version: '1.0', company, client_id: proof.client_id, method: 'GET', path: route, http_status: 200,
       ...(Array.isArray(checks) && checks.length === observed.length && checks.every((step, i) =>
         step.method === observed[i][0] && step.path === observed[i][1] && step.status === observed[i][2]) && {
-        requests: observed.map(([method, path, status]) => ({ method, path, status })),
+        requests: observed.map(([method, path, status], i) => {
+          const { started_at, ended_at } = checks[i];
+          const timed = Number.isFinite(started_at) && Number.isFinite(ended_at) && ended_at >= started_at && ended_at - started_at <= 30;
+          return { method, path, status, ...(timed && { started_at, ended_at }) };
+        }),
       }),
     };
   } catch {
@@ -57,7 +61,7 @@ function openTelegramTrace(db, owner) {
           let calls;
           try { calls = JSON.parse(event.calls); } catch { continue; }
           if (!Array.isArray(calls) || !calls.length) {
-            if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters };
+            if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters, timestamp: event.timestamp };
             continue;
           }
           reply = null;
@@ -67,13 +71,13 @@ function openTelegramTrace(db, owner) {
               tools.set(call.id, { name, state: 'Called', timestamp: event.timestamp });
             }
           }
-        } else if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters };
+        } else if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters, timestamp: event.timestamp };
       } else {
         const name = toolName(event.tool_name);
         if (!name) continue;
         const key = event.tool_call_id || 'row-' + event.id;
         const receipt = event.pap?.length <= 32768 ? readPapReceipt(event.pap) : null;
-        tools.set(key, { name, state: 'Result recorded', timestamp: tools.get(key)?.timestamp ?? event.timestamp,
+        tools.set(key, { name, state: 'Result recorded', timestamp: tools.get(key)?.timestamp ?? event.timestamp, ended_at: event.timestamp,
           ...(receipt && { pap: receipt }) });
       }
     }

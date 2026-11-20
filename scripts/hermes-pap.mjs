@@ -37,6 +37,7 @@ export function guestSession({ root, audience, subject }) {
 }
 
 export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fetch }) {
+  const metadataStarted = Date.now() / 1000;
   const metadata = await fetcher(companyOrigin + '/.well-known/oauth-protected-resource', {
     redirect: 'error', signal: AbortSignal.timeout(6000),
   });
@@ -45,14 +46,16 @@ export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fet
   const subject = createHmac('sha256', pairwiseKey).update(companyOrigin).digest('base64url');
   const headersFor = guestSession({ root: identity.key, audience: companyOrigin, subject });
   const signedRequests = [];
-  const trace = [{ method: 'GET', path: '/.well-known/oauth-protected-resource', status: metadata.status }];
+  const trace = [{ method: 'GET', path: '/.well-known/oauth-protected-resource', status: metadata.status,
+    started_at: metadataStarted, ended_at: Date.now() / 1000 }];
   const proposal = await readProposal(companyOrigin, async (url, options) => {
     const path = new URL(url).pathname;
     const isEdition = path === '/poppy/api/edition.json';
     const headers = isEdition ? { ...options.headers, ...headersFor('GET', url) } : options.headers;
+    const startedAt = Date.now() / 1000;
     const response = await fetcher(url, { ...options, headers, signal: AbortSignal.timeout(6000) });
     const received = { method: 'GET', path, status: response.status };
-    trace.push(received);
+    trace.push({ ...received, started_at: startedAt, ended_at: Date.now() / 1000 });
     if (isEdition) signedRequests.push(received);
     return response;
   });
