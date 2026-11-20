@@ -1,5 +1,7 @@
 import { run } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import interoperability from '../data/interop-evidence.json' with { type: 'json' };
+import storefronts from '../data/storefront-results.json' with { type: 'json' };
 
 const file = fileURLToPath(new URL('../test/sandbox.test.mjs', import.meta.url));
 const checks = [];
@@ -20,5 +22,7 @@ console.log(JSON.stringify({
   environment: 'local HTTPS sandbox',
   outcome: passed ? 'pass' : 'fail',
   checks,
+  interoperability,
+  storefronts,
 }, null, 2));
 if (!passed) process.exitCode = 1;

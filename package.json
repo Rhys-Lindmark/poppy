@@ -2,9 +2,12 @@
   "name": "personal-agent-protocol-demo",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "start": "node src/demo.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "scan:stores": "node src/storefront-coverage.mjs"
   }
 }

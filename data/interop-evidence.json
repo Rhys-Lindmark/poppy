@@ -1,0 +1,183 @@
+{
+  "checkedOn": "2026-11-20",
+  "clients": [
+    {
+      "name": "Datalayer TypeScript SDK",
+      "build": "0.37.5",
+      "supports": "1.0",
+      "source": "https://github.com/datalayer/personal-agent-protocol",
+      "checks": [
+        {
+          "requirement": "Commonplace discovery",
+          "version": "1.0",
+          "outcome": "pass",
+          "evidence": "Resolved the host and selected 1.0."
+        },
+        {
+          "requirement": "Etsy discovery",
+          "version": "0.3",
+          "outcome": "unsupported",
+          "evidence": "The 1.0 client returned unsupported_protocol_version."
+        }
+      ]
+    },
+    {
+      "name": "Datalayer TypeScript SDK",
+      "build": "0.37.5",
+      "supports": "0.4",
+      "source": "https://github.com/datalayer/personal-agent-protocol",
+      "checks": [
+        {
+          "requirement": "Allbirds discovery",
+          "version": "0.4",
+          "outcome": "pass",
+          "evidence": "Resolved the host with the SDK explicitly pinned to 0.4."
+        }
+      ]
+    },
+    {
+      "name": "Stacktree Poppy Simulator",
+      "supports": "1.0",
+      "source": "https://poppy-simulator.stacktr.ee/",
+      "checks": [
+        {
+          "requirement": "Commonplace discovery",
+          "version": "1.0",
+          "outcome": "pass",
+          "evidence": "The simulator validated the HTTPS manifest, protocol version, and host binding."
+        },
+        {
+          "requirement": "Commonplace OAuth metadata",
+          "version": "1.0",
+          "outcome": "unavailable",
+          "observation": "fail",
+          "evidence": "The simulator flagged HTTP 404. Commonplace offers no sign-in. Section 3.2 permits this response for a Company without an issuer.",
+          "evidenceSource": "https://personalagentprotocol.org/docs/1.0/spec#32-oauth-server"
+        }
+      ]
+    }
+  ],
+  "personalAgents": [
+    {
+      "name": "Meta Muse",
+      "status": "vendor_claim",
+      "evidence": "Sierra says Muse looks for Poppy on site visits. Independent protocol runs remain pending.",
+      "source": "https://sierra.ai/uk/blog/releasing-poppy"
+    },
+    {
+      "name": "Poppy Demo Agent",
+      "status": "source_evidence",
+      "evidence": "The project documents 0.4 in deployment and a 1.0 implementation in source. PoppyVal has yet to run the hosted agent.",
+      "source": "https://github.com/adewale/pda"
+    },
+    {
+      "name": "Hark",
+      "status": "untested",
+      "evidence": "Discovery, signed requests, scoped sign-in, and approval remain untested.",
+      "source": "https://assistantbenchmark.com/"
+    },
+    {
+      "name": "Grok Bot",
+      "status": "untested",
+      "evidence": "Discovery, signed requests, scoped sign-in, and approval remain untested.",
+      "source": "https://assistantbenchmark.com/"
+    },
+    {
+      "name": "Town",
+      "status": "untested",
+      "evidence": "Discovery, signed requests, scoped sign-in, and approval remain untested.",
+      "source": "https://assistantbenchmark.com/"
+    },
+    {
+      "name": "Instinct",
+      "status": "untested",
+      "evidence": "Discovery, signed requests, scoped sign-in, and approval remain untested.",
+      "source": "https://assistantbenchmark.com/"
+    },
+    {
+      "name": "Dots",
+      "status": "untested",
+      "evidence": "Discovery, signed requests, scoped sign-in, and approval remain untested.",
+      "source": "https://assistantbenchmark.com/"
+    }
+  ],
+  "companies": [
+    {
+      "name": "Commonplace",
+      "host": "ai.rhyslindmark.com",
+      "version": "1.0",
+      "tool": "Official Company validator",
+      "source": "https://personalagentprotocol.org/kit/company",
+      "manifest": "https://ai.rhyslindmark.com/.well-known/poppy.json",
+      "discoveryAndOpenApi": [
+        {
+          "id": "discovery.https",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.redirects-https",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.redirects-well-known",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.json",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.schema",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.supported-versions",
+          "outcome": "skip"
+        },
+        {
+          "id": "discovery.versions-same-company",
+          "outcome": "skip"
+        },
+        {
+          "id": "discovery.protocol-version",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.domain-matches-host",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.interface-present",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.extension-names",
+          "outcome": "skip"
+        },
+        {
+          "id": "discovery.sign-in-disabled",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.web-disabled",
+          "outcome": "pass"
+        },
+        {
+          "id": "discovery.web-unscoped",
+          "outcome": "pass"
+        },
+        {
+          "id": "openapi.loads",
+          "outcome": "pass"
+        },
+        {
+          "id": "openapi.version",
+          "outcome": "pass"
+        }
+      ],
+      "signedSession": "untested",
+      "directSignIn": "unavailable",
+      "operationsApproval": "unavailable"
+    }
+  ]
+}

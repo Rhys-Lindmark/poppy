@@ -6,7 +6,7 @@ function checked(response, status = 200) {
   return response.json();
 }
 
-export function createAgent({ origin, http, render, trace, sponsors }) {
+export function createAgent({ origin, http, render, trace, entriesFor, sponsors }) {
   const root = keyPair();
   const clientId = origin + '/agent.json';
   const callback = origin + '/agent/oauth/callback';
@@ -150,7 +150,9 @@ export function createAgent({ origin, http, render, trace, sponsors }) {
     if (!flow || flow.phase || url.searchParams.get('iss') !== origin ||
         url.searchParams.get('state') !== flow.state) return render.message(res, 400, 'Sign-in expired or does not match this request.');
     flow.phase = 'authorizing';
-    trace('Store → Agent', 'GET', url.pathname, 200, { result: url.searchParams.has('error') ? 'User declined sign-in' : 'Authorization code returned' }, flow.id);
+    const entry = trace('Store → Agent', 'GET', url.pathname, null,
+      { result: url.searchParams.has('error') ? 'User declined sign-in' : 'Authorization code returned' }, flow.id);
+    res.once('finish', () => { entry.status = res.statusCode; });
     if (url.searchParams.has('error')) return render.message(res, 403, 'You declined store access.');
     const code = url.searchParams.get('code');
     if (!code) return render.message(res, 400, 'The store returned no authorization code.');
@@ -208,6 +210,9 @@ export function createAgent({ origin, http, render, trace, sponsors }) {
     if (![operation_id, revision].every((value) => typeof value === 'string' && /^[\w-]+$/.test(value))) {
       throw new Error('Invalid operation references');
     }
+    const entry = trace('User → Agent', 'POST', '/agent/approval', null,
+      { decision: 'Approved the reviewed terms' }, flow.id);
+    res.once('finish', () => { entry.status = res.statusCode; });
     const approval = 'operation_id="' + operation_id + '", revision="' + revision +
       '", approver="user", approved_at=' + now() + ', input_type="tap", reference="' + randomId() + '"';
     const result = checked(await api(flow, 'POST', '/api/delivery', {
@@ -238,6 +243,13 @@ export function createAgent({ origin, http, render, trace, sponsors }) {
       return flow?.result
         ? render.result(res, flow.result, flow.id, 'Delivery updated')
         : render.message(res, 404, 'No completed delivery change.');
+    },
+    'GET /agent/trace.json': (req, res) => {
+      const flow = currentFlow(req);
+      if (!flow?.result) return json(res, 404, { error: 'no_completed_delivery_change' });
+      const requests = entriesFor(flow.id).map(({ actor, method, path, status, details }) =>
+        ({ actor, method, path, status, details }));
+      return json(res, 200, { protocol_version: version, outcome: flow.result.delivery_day, requests });
     },
   };
   return {

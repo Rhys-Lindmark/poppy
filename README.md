@@ -21,7 +21,20 @@ npm test
 node src/poppyval.mjs
 ```
 
-PoppyVal prints JSON for the local agent and store scenario. The fixture currently accepts the bundled agent and uses live HTTPS requests inside the process. [PoppyVal design and market evidence](docs/poppyval.md) describes the planned external-agent cohort and checks.
+PoppyVal prints JSON for the local HTTPS scenario, the dated external interoperability checks, and the public storefront cohort. Run `npm run scan:stores --silent` to get a fresh discovery snapshot. [PoppyVal methodology and reproduction](docs/poppyval.md).
+
+Run `node scripts/capture-delivery-trace.mjs` to replay the seeded workflow and export its redacted request trace. The site publishes a [recorded delivery trace](https://ai.rhyslindmark.com/poppy/protocol-trace.html).
+
+## Commonplace coding agent
+
+```sh
+node src/commonplace.mjs
+node src/commonplace.mjs --approve=REVIEWED_REVISION
+```
+
+The first command discovers the live Commonplace catalog and prints the proposed terms and revision as JSON. Review the terms and supply that revision to produce the importable `backup` object. Use Commonplace’s Restore action to import that object as a JSON file. The hosted edition is public and signed out.
+
+To open the review through Siri, create a shortcut named **Find a Commonplace edition** with an **Open URLs** action for `https://ai.rhyslindmark.com/poppy/?intent=edition`. Say “Siri, find a Commonplace edition.” Review and approve the download on the page.
 
 [Browse 50 cookbook proposals and five runnable guides](docs/cookbooks.md).
 
@@ -29,4 +42,4 @@ PoppyVal prints JSON for the local agent and store scenario. The fixture current
 
 [Configuration and verification for the hackathon sponsors](docs/sponsors.md).
 
-The public Commonplace edition demo, cookbook catalog, PoppyVal report, and sales coverage page build with `node scripts/build-public.mjs <output-directory>`. The output targets the `/poppy` path on ai.rhyslindmark.com.
+The demo and reports build with `node scripts/build-public.mjs <output-directory>`. The output targets the `/poppy` path on ai.rhyslindmark.com.

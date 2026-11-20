@@ -43,3 +43,35 @@ The Census Bureau’s November 2026 time series puts calendar 2025 U.S. retail e
 | Walmart US | $99.6B of ecommerce-related net sales in the fiscal year ending January 31, 2026. [Walmart 10-K](https://stock.walmart.com/sec-filings/all-sec-filings/content/0000104169-26-000055/wmt-20260131.htm) | `www.walmart.com` returned HTTP 404. |
 | Target | $21.1B digitally originated merchandise sales in fiscal 2025. [Target 10-K](https://corporate.target.com/investors/annual/2025-annual-report/10-k-report/10-k-part-i/item-1-business) | `www.target.com` returned HTTP 404. |
 | Shopify merchants | About $175B as a platform-level proxy using Shopify’s reported U.S. market share of over 14% and the Census denominator. [Shopify investor relations](https://www.shopify.com/investors) | Sierra reports a platform-wide rollout. `www.allbirds.com` served JSON declaring 0.4. Individual domain behavior varies. [Sierra rollout](https://sierra.ai/uk/blog/releasing-poppy) |
+
+### November 20, 2026 results
+
+[Sales coverage](https://ai.rhyslindmark.com/poppy/coverage.html) shows the 16 storefronts in the named cohort. Five published a recognizable Poppy manifest and 11 returned HTTP 404. The count is for this cohort. Etsy’s 0.3 manifest accounts for approximately $7.74B in 2025 U.S. sales, or 0.62% of the Census denominator, among observed publishing merchants with a measured direct weight. This uses Etsy marketplace GMS of $10.46B and a 74% share from U.S. buyers. Amazon, Walmart, and Target together account for approximately $560.7B in the HTTP 404 group. The Shopify rollout proxy stays outside both named-store totals. [Etsy 10-K](https://investors.etsy.com/sec-filings/all-sec-filings/content/0001370637-26-000019/etsy-20251231.htm)
+
+Refresh the named cohort without overwriting the committed snapshot.
+
+```sh
+npm run scan:stores --silent > storefront-results.json
+```
+
+The official Company validator reported 11 discovery passes, three discovery skips, and two OpenAPI passes for Commonplace. Use the validator from the [Company implementation kit](https://personalagentprotocol.org/kit/company).
+
+```sh
+node validate/index.ts check https://ai.rhyslindmark.com --only discovery. --json
+node validate/index.ts check https://ai.rhyslindmark.com --only openapi. --json
+```
+
+The [Stacktree simulator](https://poppy-simulator.stacktr.ee/) passed the 1.0 document, version, and organization checks. It flagged HTTP 404 at the protected resource metadata endpoint. [Section 3.2](https://personalagentprotocol.org/docs/1.0/spec#32-oauth-server) permits that response for a Company with no issuer and signed-out access. This run exercised discovery only.
+
+In a scratch directory, install [Datalayer's TypeScript SDK](https://github.com/datalayer/personal-agent-protocol) at version 0.37.5 and call its published discovery method.
+
+```js
+import { discoverCompany } from '@datalayer/personal-agent-protocol';
+
+await discoverCompany('ai.rhyslindmark.com', { protocolVersions: ['1.0'] });
+await discoverCompany('www.allbirds.com', { protocolVersions: ['0.4'] });
+await discoverCompany('www.etsy.com', { protocolVersions: ['1.0'] });
+// The final call returns unsupported_protocol_version.
+```
+
+The [PoppyVal report](https://ai.rhyslindmark.com/poppy/poppyval.html) records these client results, the individual Company validator checks, and the consumer product roster. The [recorded sandbox run](https://ai.rhyslindmark.com/poppy/protocol-trace.html) covers the signed workflow with the seeded account.

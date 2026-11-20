@@ -3,7 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import edition from '../data/commonplace-edition.json' with { type: 'json' };
-import market from '../data/retail-2025.json' with { type: 'json' };
+import storeResults from '../data/storefront-results.json' with { type: 'json' };
+import { coverageMarkup, escapeHtml as escape, poppyvalMarkup } from '../src/report-views.mjs';
+import { traceTable } from '../src/views.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const output = resolve(process.argv[2] || 'dist');
@@ -13,14 +15,12 @@ for (const folder of [site, join(site, 'api'), join(site, 'cookbooks'), join(out
 }
 const write = (path, value) => writeFileSync(join(site, path), value);
 const json = (path, value) => write(path, JSON.stringify(value, null, 2) + '\n');
-const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-})[c]);
 const siteOrigin = 'https://ai.rhyslindmark.com';
 const route = '/poppy';
 const links = [
   [route + '/', 'Poppy'], [route + '/cookbooks/', 'Cookbooks'],
-  [route + '/coverage.html', 'Sales coverage'], [route + '/poppyval.html', 'PoppyVal'],
+  [route + '/protocol-trace.html', 'Delivery trace'], [route + '/coverage.html', 'Sales coverage'],
+  [route + '/poppyval.html', 'PoppyVal'],
   [route + '/sponsors.html', 'Sponsors'],
 ];
 function page(title, body, script = '') {
@@ -60,7 +60,8 @@ write('index.html', page('Poppy', '<section><h1>Poppy</h1><p>Prepare a reading e
   '</section><section><h2>Store requests</h2><table><thead><tr><th scope="col">Request</th><th scope="col">HTTP</th></tr></thead>' +
   '<tbody id="trace-body"></tbody></table><p class="note"><a href="/.well-known/poppy.json">Discovery document</a></p></section>' +
   '<section><h2>Run the signed sandbox</h2><p><a href="/poppy/source.tar.gz">Download the source, runnable guides, and sponsor setup</a>.</p>' +
-  '<p>The local HTTPS sandbox includes delegated Session signing, Direct Sign-In, and approval of the delivery change.</p></section>',
+  '<p>The local HTTPS sandbox includes delegated Session signing, Direct Sign-In, and approval of the delivery change. ' +
+  '<a href="/poppy/protocol-trace.html">View a recorded run</a>.</p></section>',
   '<script type="module" src="/poppy/commonplace-demo.mjs"></script>'));
 
 const catalog = readFileSync(join(repo, 'docs/cookbooks.md'), 'utf8');
@@ -80,24 +81,24 @@ write('cookbooks/index.html', page('Poppy cookbooks', '<h1>Poppy cookbooks</h1><
   entries.map(([, , title, result]) => '<dt>' + escape(title) + '</dt><dd>' + escape(result) + '</dd>').join('') +
   '</dl><p><a href="https://personalagentprotocol.org/docs/demos">Community demos</a></p></section>'));
 
-write('coverage.html', page('Ecommerce sales coverage', '<h1>Ecommerce sales coverage</h1><p>' + escape(market.market) +
-  ' · about $1.25T. <a href="' + escape(market.marketSource) + '">Census data</a></p>' +
-  '<table class="coverage"><caption>Public discovery checked ' + escape(market.checked) + '</caption><thead><tr>' +
-  '<th scope="col">Retailer or platform</th><th scope="col">Online sales</th><th scope="col">Public discovery</th></tr></thead><tbody>' +
-  market.retailers.map((row) => {
-    const share = (row.billions / market.marketBillions * 100).toFixed(1);
-    return '<tr><th scope="row"><a href="' + escape(row.source) + '">' + escape(row.name) + '</a></th><td>' +
-      escape(row.display) + ' (' + share + '%)<meter min="0" max="100" value="' + share + '" aria-label="' +
-      escape(row.name + ' share') + '"></meter><small>' + escape(row.basis) + '</small></td><td>' +
-      escape(row.discovery) + '</td></tr>';
-  }).join('') + '</tbody></table><p class="note">Live workflows are untested for these retailers.</p>'));
+json('storefront-results.json', storeResults);
+write('coverage.html', page('Ecommerce sales coverage',
+  coverageMarkup('/poppy/storefront-results.json')));
 
 const evidence = JSON.parse(execFileSync(process.execPath, [join(repo, 'src/poppyval.mjs')], { encoding: 'utf8', timeout: 10000 }));
 json('poppyval.json', evidence);
-write('poppyval.html', page('PoppyVal', '<h1>PoppyVal</h1><p>Results for the bundled Poppy 1.0 HTTPS sandbox.</p><ul>' +
-  evidence.checks.map(({ check, outcome }) => '<li>' + escape(check) + ' — ' + escape(outcome) + '</li>').join('') +
-  '</ul><p><a href="poppyval.json">Machine-readable results</a></p><p>Independent PoppyVal runs against external agents are pending. ' +
-  'Sierra reports that Meta Muse looks for Poppy when visiting sites. <a href="https://sierra.ai/uk/blog/releasing-poppy">Sierra announcement</a></p>'));
+write('poppyval.html', page('PoppyVal', poppyvalMarkup(evidence)));
+
+const trace = JSON.parse(execFileSync(process.execPath, [join(repo, 'scripts/capture-delivery-trace.mjs')], {
+  encoding: 'utf8', timeout: 10000,
+}));
+json('delivery-trace.json', trace);
+write('protocol-trace.html', page('Delivery rescheduling trace',
+  '<h1>Delivery rescheduling trace</h1><p>The seeded Demo Store moved the order from Friday to ' +
+  escape(trace.outcome) + ' after scoped sign-in and approval. This redacted trace was captured over local HTTPS.</p>' +
+  traceTable(trace.requests) +
+  '<p><a href="delivery-trace.json">Download the request trace</a></p>' +
+  '<p><a href="/poppy/cookbooks/delivery-approval.html">Replay the scenario</a></p>'));
 
 const sponsors = readFileSync(join(repo, 'docs/sponsors.md'), 'utf8');
 const sponsorRows = [...sponsors.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \|$/gm)].slice(2);
@@ -110,7 +111,7 @@ write('sponsors.html', page('Hackathon sponsors', '<h1>Hackathon sponsors</h1>' 
   '<p class="note"><a href="/poppy/sponsors.md">Setup instructions</a></p>'));
 write('sponsors.md', sponsors);
 
-for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs']) {
+for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs', 'commonplace-client.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +
@@ -118,4 +119,4 @@ for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs']) {
   } else copyFileSync(path, join(site, name));
 }
 execFileSync('tar', ['-czf', join(site, 'source.tar.gz'), '-C', repo,
-  'README.md', 'GLOSSARY.md', 'package.json', 'src', 'public', 'data', 'test', 'docs', 'scripts'], { timeout: 10000 });
+  'README.md', 'GLOSSARY.md', 'package.json', 'src', 'public', 'data', 'test', 'docs', 'scripts'], { timeout: 10000, env: { ...process.env, COPYFILE_DISABLE: '1' } });

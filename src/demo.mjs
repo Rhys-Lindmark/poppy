@@ -8,6 +8,7 @@ import { createAgent } from './agent.mjs';
 import { confinedHttp, json } from './protocol.mjs';
 import { createStore } from './store.mjs';
 import { createViews } from './views.mjs';
+import storefrontResults from '../data/storefront-results.json' with { type: 'json' };
 import { createSponsors } from './sponsors/index.mjs';
 
 function localCertificate() {
@@ -47,12 +48,14 @@ export async function startSandbox({ port = 0, sponsors = createSponsors() } = {
   const events = [];
   const trace = (actor, method, path, status, details, flowId) => {
     if (!flowId) return;
-    events.push({ actor, method, path, status, details, flowId });
+    const entry = { actor, method, path, status, details, flowId };
+    events.push(entry);
     if (events.length > 300) events.shift();
+    return entry;
   };
   const entriesFor = (flowId) => flowId ? events.filter((entry) => entry.flowId === flowId) : [];
   const render = createViews(entriesFor);
-  const agent = createAgent({ origin, http, render, trace, sponsors });
+  const agent = createAgent({ origin, http, render, trace, entriesFor, sponsors });
   const store = createStore({ origin, http, clientId: agent.clientId, render, trace, persona: sponsors.persona });
   handle = async (req, res) => {
     if (req.headers.host !== new URL(origin).host || !req.url?.startsWith('/') || req.url.startsWith('//')) {
@@ -65,6 +68,7 @@ export async function startSandbox({ port = 0, sponsors = createSponsors() } = {
     }
     if (req.method === 'GET' && url.pathname === '/') return render.home(res, url.searchParams.get('day'));
     if (req.method === 'GET' && url.pathname === '/coverage') return render.coverage(res);
+    if (req.method === 'GET' && url.pathname === '/storefront-results.json') return json(res, 200, storefrontResults);
     if (req.method === 'GET' && styles.has(url.pathname)) {
       res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8', 'X-Content-Type-Options': 'nosniff' });
       return res.end(styles.get(url.pathname));

@@ -1,0 +1,26 @@
+{
+  "source": "https://papchecker.com/sites",
+  "groups": {
+    "merchant": "Major U.S. retail storefronts and marketplaces",
+    "platform_sample": "Shopify-hosted storefront examples",
+    "reference": "Public Poppy store examples"
+  },
+  "stores": [
+    { "name": "Amazon US", "host": "www.amazon.com", "aliases": ["amazon.com"], "group": "merchant" },
+    { "name": "Walmart US", "host": "www.walmart.com", "aliases": ["walmart.com"], "group": "merchant" },
+    { "name": "Target", "host": "www.target.com", "aliases": ["target.com"], "group": "merchant" },
+    { "name": "eBay US", "host": "www.ebay.com", "aliases": ["ebay.com", "pages.ebay.com"], "group": "merchant" },
+    { "name": "Costco US", "host": "www.costco.com", "aliases": ["costco.com"], "group": "merchant" },
+    { "name": "Best Buy US", "host": "www.bestbuy.com", "aliases": ["bestbuy.com"], "group": "merchant" },
+    { "name": "Home Depot US", "host": "www.homedepot.com", "aliases": ["homedepot.com"], "group": "merchant" },
+    { "name": "Etsy", "host": "www.etsy.com", "aliases": ["etsy.com"], "group": "merchant" },
+    { "name": "Wayfair", "host": "www.wayfair.com", "aliases": ["wayfair.com"], "group": "merchant" },
+    { "name": "Nordstrom", "host": "www.nordstrom.com", "aliases": ["nordstrom.com"], "group": "merchant" },
+    { "name": "Allbirds", "host": "www.allbirds.com", "aliases": ["allbirds.com"], "group": "platform_sample" },
+    { "name": "Gymshark US", "host": "www.gymshark.com", "aliases": ["gymshark.com"], "group": "platform_sample" },
+    { "name": "Brooklinen", "host": "www.brooklinen.com", "aliases": ["brooklinen.com"], "group": "platform_sample" },
+    { "name": "Fashion Nova", "host": "www.fashionnova.com", "aliases": ["fashionnova.com"], "group": "platform_sample" },
+    { "name": "BYLT Basics", "host": "byltbasics.com", "aliases": ["www.byltbasics.com"], "group": "reference" },
+    { "name": "Commonplace", "host": "ai.rhyslindmark.com", "aliases": [], "group": "reference" }
+  ]
+}

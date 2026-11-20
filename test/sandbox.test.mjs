@@ -2,44 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startSandbox } from '../src/demo.mjs';
 
-const field = (html, name) => {
-  const match = html.match(new RegExp('name="' + name + '" value="([^"]+)"'));
-  assert.ok(match, 'Expected hidden field ' + name);
-  return match[1];
-};
-
-function browser(sandbox) {
-  let cookie = '';
-  const { origin, http } = sandbox;
-  return {
-    get: (path) => http(new URL(path, origin).href, { headers: { Cookie: cookie } }),
-    async post(path, fields, requestOrigin = origin) {
-      const body = new URLSearchParams(fields).toString();
-      const response = await http(origin + path, {
-        method: 'POST',
-        headers: { Origin: requestOrigin, Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
-      });
-      if (response.headers['set-cookie']) cookie = response.headers['set-cookie'][0].split(';')[0];
-      return response;
-    },
-  };
-}
-
-async function signIn(client, day, scopes, task = 'reschedule') {
-  const start = await client.post('/agent/start', { day, task });
-  assert.equal(start.status, 303, start.text);
-  const store = await client.get(start.headers.location);
-  assert.equal(store.status, 200, store.text);
-  assert.match(store.text, /Sign in at Demo Store/);
-  const consent = await client.post('/oauth/authorize', [
-    ['ticket', field(store.text, 'ticket')],
-    ['decision', 'allow'],
-    ...scopes.map((scope) => ['scope', scope]),
-  ]);
-  assert.equal(consent.status, 303, consent.text);
-  return client.get(consent.headers.location);
-}
+import { browser, field, signIn } from '../scripts/support/sandbox-client.mjs';
 
 const scopes = ['orders:read', 'orders:write'];
 
@@ -77,6 +40,13 @@ test('discovery, scoped sign-in, exact approval, and a verified delivery change'
   assert.match(result.text, /scheduled for <strong>Saturday/);
   assert.match(result.text, /User approved the proposed revision/);
   assert.doesNotMatch(result.text, /access_token|code_verifier|client_assertion|poppy_flow/);
+  const trace = await client.get('/agent/trace.json');
+  assert.equal(trace.status, 200);
+  assert.equal(trace.json().outcome, 'Saturday');
+  assert.equal(trace.json().requests[0].path, '/.well-known/poppy.json');
+  assert.equal(trace.json().requests.at(-1).details.approval, 'User approved the proposed revision');
+  assert.doesNotMatch(trace.text, /flowId|access_token|code_verifier|client_assertion|poppy_flow/);
+  assert.equal((await observer.get('/agent/trace.json')).status, 404);
   const replay = await client.post('/agent/approval', fields);
   assert.equal(replay.status, 303);
 

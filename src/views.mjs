@@ -1,8 +1,4 @@
-import retail from '../data/retail-2025.json' with { type: 'json' };
-
-export const escape = (value) => String(value).replace(/[&<>"']/g, (character) => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-})[character]);
+import { coverageMarkup, escapeHtml as escape } from './report-views.mjs';
 
 function page(res, status, title, content) {
   res.writeHead(status, {
@@ -24,7 +20,7 @@ function hidden(name, value) {
   return '<input type="hidden" name="' + name + '" value="' + escape(value) + '">';
 }
 
-function traceTable(entries) {
+export function traceTable(entries) {
   if (!entries.length) return '<p class="muted">Start a delivery task to see the protocol requests.</p>';
   const rows = entries.map(({ actor, method, path, status, details }) => {
     const items = Object.entries(details || {}).map(([name, value]) => '<dt>' + escape(name) + '</dt><dd>' + escape(value) + '</dd>');
@@ -54,20 +50,7 @@ export function createViews(entriesFor) {
         '<button name="task" value="read">Look up delivery</button></form></section>' + trail());
     },
     coverage(res) {
-      const rows = retail.retailers.map((retailer) => {
-        const share = 100 * retailer.billions / retail.marketBillions;
-        return '<tr><th scope="row"><a href="' + escape(retailer.source) + '">' + escape(retailer.name) + '</a></th>' +
-          '<td><strong>' + escape(retailer.display) + '</strong> <span class="muted">(' + share.toFixed(1) + '%)</span>' +
-          '<meter min="0" max="100" value="' + share + '" aria-label="' + escape(retailer.name + ' estimated share of U.S. ecommerce') +
-          '"></meter><small>' + escape(retailer.basis) + '</small></td><td>' + escape(retailer.discovery) + '</td></tr>';
-      });
-      return page(res, 200, 'Ecommerce sales coverage',
-        '<h1>Ecommerce sales coverage</h1><p>' + escape(retail.market) + ': about $1.25T. ' +
-        '<a href="' + escape(retail.marketSource) + '">Census data</a></p>' +
-        '<table class="coverage"><caption>Selected retailers and platforms. Public discovery checked ' + escape(retail.checked) +
-        '.</caption><thead><tr><th scope="col">Retailer or platform</th><th scope="col">Online sales</th>' +
-        '<th scope="col">Public discovery</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>' +
-        '<p class="muted note">Live Poppy sessions and purchases were untested for this sample.</p>');
+      return page(res, 200, 'Ecommerce sales coverage', coverageMarkup('/storefront-results.json'));
     },
     signIn(res, ticket, scopes) {
       const choices = scopes.map(([id, label]) => '<label class="choice"><input type="checkbox" name="scope" value="' +
@@ -105,7 +88,9 @@ export function createViews(entriesFor) {
     result(res, result, id, title) {
       return page(res, 200, title, '<section><h1>' + escape(title) + '</h1><p>Order ' +
         escape(result.order_id) + ' is scheduled for <strong>' + escape(result.delivery_day) +
-        '</strong>.</p><p><a href="/">Start another task</a></p></section>' + trail(id));
+        '</strong>.</p><p><a href="/">Start another task</a></p>' +
+        (title === 'Delivery updated' ? '<p><a href="/agent/trace.json">Download request trace</a></p>' : '') +
+        '</section>' + trail(id));
     },
     message(res, status, message) {
       return page(res, status, 'Delivery task', '<h1>' + escape(message) +
