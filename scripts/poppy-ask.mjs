@@ -40,7 +40,7 @@ if (args[0] === '--telegram-pair') {
     if (await browserExit) throw new Error('The Mac could not open the browser.');
     console.log('Opened the private Telegram trace in your browser.');
   } catch {
-    console.error('Could not open the trace. Open the Poppy Telegram trace and sign in with your access key.');
+    console.error('Could not open the trace. If you have set a trace key, sign in from the Poppy Telegram trace page.');
     process.exitCode = 1;
   }
 } else if (args[0] === '--server') {

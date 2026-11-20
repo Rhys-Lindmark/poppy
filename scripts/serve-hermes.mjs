@@ -21,6 +21,7 @@ const handle = createHermesHandler({
   hermesToken: process.env.API_SERVER_KEY,
   publicPage: process.env.POPPY_OWNER_PAGE,
   traceStore,
+  tracePassphraseFile: join(homedir(), '.config/poppy/telegram-trace.verifier'),
 });
 
 createServer({ requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {

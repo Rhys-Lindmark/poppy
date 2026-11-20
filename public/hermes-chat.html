@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Message Poppy</title>
-  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-sign-in">
-  <script type="module" src="/hermes-chat.mjs?v=telegram-sign-in"></script>
+  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-passphrase">
+  <script type="module" src="/hermes-chat.mjs?v=telegram-passphrase"></script>
 </head>
 <body>
   <main>
@@ -16,11 +16,21 @@
       <label for="key">Poppy access key</label>
       <input id="key" type="password" maxlength="128" required autocomplete="current-password" spellcheck="false">
       <button>Connect to Hermes</button>
-      <p id="telegram-sign-in-help" hidden>From the Poppy checkout on your Mac, run <code>npm run ask -- --open-telegram-trace</code>, or paste your Poppy access key here.</p>
+      <p id="telegram-sign-in-help" hidden>First visit or forgot your key? On your Mac, run <code>npm run ask -- --open-telegram-trace</code> from the Poppy checkout to set a trace key.</p>
     </form>
     <p id="status" role="status"></p>
     <section id="telegram-trace" aria-label="RhysBot Telegram stack trace" hidden>
       <div class="telegram-toolbar"><p id="telegram-status" role="status"></p><button id="telegram-disconnect" type="button">Sign out</button></div>
+      <details id="telegram-key-settings" hidden>
+        <summary>Set or change trace key</summary>
+        <form id="telegram-key-form">
+          <label for="new-trace-key">New trace key</label>
+          <p id="trace-key-hint">Use a passphrase of 14 to 128 characters. Several unrelated words are easier to remember.</p>
+          <input id="new-trace-key" type="password" minlength="14" maxlength="128" required autocomplete="new-password" spellcheck="false" aria-describedby="trace-key-hint">
+          <button>Save trace key</button>
+          <p id="trace-key-status" role="status"></p>
+        </form>
+      </details>
       <div class="telegram-controls"><label for="telegram-turn">Turn</label><select id="telegram-turn"><option value="">Latest turn</option></select></div>
       <div id="telegram-workspace" class="telegram-workspace" hidden>
         <div><section aria-labelledby="overview-title" class="telegram-waterfall telegram-overview">

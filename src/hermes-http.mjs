@@ -47,13 +47,15 @@ async function boundedJson(body, limit) {
 }
 
 export function createHermesHandler({ accessToken, hermesToken, origin = 'http://127.0.0.1:8642',
-  publicPage = 'https://ai.rhyslindmark.com/poppy/agent', fetcher = fetch, traceStore }) {
+  publicPage = 'https://ai.rhyslindmark.com/poppy/agent', fetcher = fetch, traceStore, tracePassphraseFile }) {
   if (!keyPattern.test(accessToken || '') || typeof hermesToken !== 'string' || hermesToken.length < 24) {
     throw new Error('Poppy and Hermes access tokens are required.');
   }
   const admissions = new Map();
   const traces = new Map();
-  const telegramAccess = createTelegramAccess(new URL(publicPage).origin);
+  const telegramAccess = createTelegramAccess(new URL(publicPage).origin, {
+    passphraseFile: tracePassphraseFile, readBody: boundedJson,
+  });
   async function call(path, options = {}) {
     const result = await fetcher(new URL(path, origin), {
       ...options, redirect: 'error', signal: AbortSignal.timeout(8000), headers: {
@@ -127,7 +129,7 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
     }
     if (request.method === 'GET' && telegramView) {
       if (!traceStore?.telegram) return response({ reply: 'The Telegram trace is unavailable.' }, 503);
-      try { return response({ turns: traceStore.telegram() }); }
+      try { return response({ turns: traceStore.telegram(), ...(telegramAccess.canSetKey(request) && { can_set_key: true }) }); }
       catch { return response({ reply: 'Telegram history is temporarily unavailable.' }, 503); }
     }
     const run = url.searchParams.get('run');

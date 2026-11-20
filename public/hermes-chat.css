@@ -40,6 +40,10 @@ button[type="button"] { background: transparent; color: var(--accent); }
 #trace pre { margin-block: 0.45rem; padding: 0.65rem; border: 1px solid var(--line); background: var(--input); font-size: 0.8rem; overflow: auto; }
 .telegram-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; }
 .telegram-toolbar p { margin: 0; }
+#telegram-key-settings { margin-block: 0.65rem; }
+#telegram-key-settings summary { color: var(--accent); cursor: pointer; }
+#telegram-key-form { max-width: 29rem; margin-block: 0.65rem; }
+#telegram-key-form p { font-size: 0.9rem; margin-block: 0.45rem; }
 .telegram-view {
   --paper: #141b19; --ink: #ecf0e7; --input: #1d2926; --accent: #bcd7c0;
   --border: #60736b; --line: #34463e; --focus: #f0b86a;

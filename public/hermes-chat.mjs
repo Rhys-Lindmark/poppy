@@ -21,12 +21,17 @@ const telegramTicks = document.querySelector('#telegram-ticks');
 const telegramOverview = document.querySelector('#telegram-overview');
 const spanName = document.querySelector('#telegram-span-name');
 const spanDetails = document.querySelector('#telegram-span-details');
+const traceKeySettings = document.querySelector('#telegram-key-settings');
+const traceKeyForm = document.querySelector('#telegram-key-form');
+const newTraceKey = document.querySelector('#new-trace-key');
+const traceKeyStatus = document.querySelector('#trace-key-status');
 if (telegramMode) {
   document.body.classList.add('telegram-view');
   document.querySelector('h1').textContent = 'RhysBot trace explorer';
   document.title = 'RhysBot trace explorer';
   document.querySelector('a[href="/?view=telegram"]').setAttribute('aria-current', 'page');
   document.querySelector('#telegram-sign-in-help').hidden = false;
+  connect.querySelector('label').textContent = 'Trace key';
   connect.querySelector('button').textContent = 'Sign in to the trace';
 }
 let key = '';
@@ -204,9 +209,11 @@ function showTelegram(turns) {
   if (telegramStatus.textContent !== label) telegramStatus.textContent = label;
 }
 
-function openTelegram(turns) {
+function openTelegram({ turns, can_set_key: canSetKey }, showSetup = false) {
   connect.hidden = true;
   telegram.hidden = false;
+  traceKeySettings.hidden = !canSetKey;
+  traceKeySettings.open = Boolean(canSetKey && showSetup);
   status.textContent = '';
   showTelegram(turns);
   const current = generation;
@@ -222,6 +229,8 @@ function closeTelegram(message = '') {
   selectedSpan = undefined;
   telegramTurns.replaceChildren();
   telegramStatus.textContent = '';
+  traceKeyForm.reset();
+  traceKeyStatus.textContent = '';
   telegram.hidden = true;
   connect.hidden = false;
   status.textContent = message;
@@ -348,10 +357,11 @@ connect.addEventListener('submit', async (event) => {
   key = keyField.value.trim();
   try {
     if (telegramMode) {
-      await call({ method: 'POST', view: 'telegram', action: 'session' });
+      const passphrase = key;
       key = '';
+      await call({ method: 'POST', view: 'telegram', action: 'session', body: { passphrase } });
       keyField.value = '';
-      openTelegram((await call({ view: 'telegram' })).turns);
+      openTelegram(await call({ view: 'telegram' }));
       return;
     }
     await call();
@@ -449,6 +459,22 @@ document.querySelector('#telegram-disconnect').addEventListener('click', async (
   }
 });
 
+traceKeyForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = traceKeyForm.querySelector('button');
+  button.disabled = true;
+  traceKeyStatus.textContent = '';
+  try {
+    await call({ method: 'POST', view: 'telegram', action: 'key', body: { passphrase: newTraceKey.value } });
+    traceKeyForm.reset();
+    traceKeyStatus.textContent = 'Trace key saved. Use it the next time you sign in.';
+  } catch (error) {
+    traceKeyStatus.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
 async function resumeTelegram() {
   const link = new URL(location.href);
   const ticket = new URLSearchParams(link.hash.slice(1)).get('pair');
@@ -460,7 +486,7 @@ async function resumeTelegram() {
   status.textContent = 'Opening RhysBot’s trace…';
   try {
     if (ticket) await call({ method: 'POST', view: 'telegram', action: 'session', ticket });
-    openTelegram((await call({ view: 'telegram' })).turns);
+    openTelegram(await call({ view: 'telegram' }), Boolean(ticket));
   } catch (error) {
     closeTelegram(!ticket && error.status === 401 ? '' : error.message);
   }

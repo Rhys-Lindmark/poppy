@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -129,4 +129,38 @@ test('Telegram trace pairing is single-use, read-only, and keeps a session on re
   assert.match((await action('logout', { ...headers, Origin: origin })).headers.get('Set-Cookie'), /Max-Age=0/);
   assert.equal((await handle(new Request(endpoint, { headers }))).status, 401);
   assert.equal((await action('session', { Origin: origin, Authorization: 'Bearer ' + access })).status, 200);
+});
+
+test('the owner can set a persistent trace key and sign in with trace-only permissions', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'poppy-trace-key-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const tracePassphraseFile = join(dir, 'verifier');
+  const origin = 'https://poppy.example';
+  const endpoint = origin + '/message?view=telegram';
+  const accessToken = 'b'.repeat(48);
+  const passphrase = 'violet silver avenue';
+  const config = { accessToken, hermesToken: 'c'.repeat(48), publicPage: origin + '/', tracePassphraseFile,
+    traceStore: { telegram: () => [{ id: 1, tools: [] }] } };
+  let handle = createHermesHandler(config);
+  const action = (name, headers = {}, body) => handle(new Request(endpoint + '&action=' + name, {
+    method: 'POST', headers: { Origin: origin, ...headers }, body: body && JSON.stringify(body),
+  }));
+  const cookies = (res) => ({ Cookie: res.headers.get('Set-Cookie').split(';')[0] });
+  const trace = (headers) => handle(new Request(endpoint, { headers }));
+  assert.equal((await action('key', {}, { passphrase })).status, 403);
+  const owner = cookies(await action('session', { Authorization: 'Bearer ' + accessToken }));
+  assert.equal((await (await trace(owner)).json()).can_set_key, true);
+  assert.equal((await action('key', owner, { passphrase: 'too short' })).status, 400);
+  assert.equal((await action('key', owner, { passphrase })).status, 200);
+  assert.equal(statSync(tracePassphraseFile).mode & 0o777, 0o600);
+  assert.match(readFileSync(tracePassphraseFile, 'utf8'), /^[a-f0-9]{32}:[a-f0-9]{64}\n$/);
+  handle = createHermesHandler(config);
+  assert.equal((await trace(owner)).status, 401);
+  const signed = await action('session', {}, { passphrase });
+  assert.equal(signed.status, 200);
+  const reader = cookies(signed);
+  assert.deepEqual(await (await trace(reader)).json(), { turns: [{ id: 1, tools: [] }] });
+  assert.equal((await action('key', reader, { passphrase })).status, 403);
+  assert.equal((await handle(new Request(origin + '/message', { method: 'POST', headers: reader }))).status, 401);
+  assert.equal((await action('session', {}, { passphrase: 'incorrect passphrase' })).status, 429);
 });
