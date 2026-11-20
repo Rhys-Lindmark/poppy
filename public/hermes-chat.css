@@ -38,6 +38,14 @@ button[type="button"] { background: transparent; color: var(--accent); }
 #trace li + li { margin-top: 0.5rem; }
 #trace summary { cursor: pointer; overflow-wrap: anywhere; font-size: 0.9rem; }
 #trace pre { margin-block: 0.45rem; padding: 0.65rem; border: 1px solid var(--line); background: var(--input); font-size: 0.8rem; overflow: auto; }
+.telegram-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; }
+.telegram-toolbar p { margin: 0; }
+#telegram-turns, #telegram-turns ol { list-style: none; padding-inline-start: 0; }
+#telegram-turns { font: 0.875rem/1.55 ui-monospace, monospace; }
+#telegram-turns > li { padding-block: 0.65rem; border-bottom: 1px solid var(--line); }
+#telegram-turns ol { margin-block: 0.3rem; margin-inline-start: 0.4rem; border-inline-start: 1px solid var(--border); padding-inline-start: 1rem; }
+#telegram-turns ol li { overflow-wrap: anywhere; padding-block: 0.2rem; }
+#telegram-turns summary { cursor: pointer; color: var(--accent); overflow-wrap: anywhere; }
 @media (max-width: 50rem) {
   #live-layout:not([hidden]) { grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
   #trace { border-inline-start: 0; border-top: 1px solid var(--line); padding: 1rem 0 0; }

@@ -1,14 +1,17 @@
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createHermesHandler } from '../src/hermes-http.mjs';
 import { openHermesTraceStore } from './hermes-trace-store.mjs';
 
 const port = 8652;
+let telegramOwner;
+try { telegramOwner = readFileSync(join(homedir(), '.config/poppy/telegram-owner'), 'utf8').trim(); } catch { /* Optional owner view. */ }
 let traceStore;
 try {
-  traceStore = openHermesTraceStore(join(process.env.HERMES_HOME ?? join(homedir(), '.hermes'), 'state.db'));
+  traceStore = openHermesTraceStore(join(process.env.HERMES_HOME ?? join(homedir(), '.hermes'), 'state.db'), telegramOwner);
 } catch {
   // Keep event tracing and chat available if the local history is unavailable.
   traceStore = {};

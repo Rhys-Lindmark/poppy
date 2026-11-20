@@ -118,6 +118,11 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
     if (!['POST', 'GET', 'DELETE'].includes(request.method)) {
       return response({ reply: 'Method is unavailable.' }, 405, { Allow: 'POST, GET, DELETE' });
     }
+    if (request.method === 'GET' && url.searchParams.get('view') === 'telegram') {
+      if (!traceStore?.telegram) return response({ reply: 'The Telegram trace is unavailable.' }, 503);
+      try { return response({ turns: traceStore.telegram() }); }
+      catch { return response({ reply: 'Telegram history is temporarily unavailable.' }, 503); }
+    }
     const run = url.searchParams.get('run');
     if (request.method === 'GET' && !run) return response({ ready: true });
     if (request.method !== 'POST' && !runPattern.test(run || '')) {

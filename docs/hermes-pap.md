@@ -10,6 +10,8 @@ The [agent simulations](https://ai.rhyslindmark.com/poppy/agent-simulations) rep
 
 The private chat polls `/message?run=…&trace=1`. The bridge listens to the native Hermes run stream and exposes a small set of tool event fields. Its read-only history lookup matches the prompt, session, and tool completion time before attaching Commonplace evidence. An ambiguous match leaves the PAP evidence empty. The signed request receipt records the Company’s HTTP response. The signature test verifies the cryptography separately.
 
+The [Telegram stack trace](https://ai.rhyslindmark.com/poppy/telegram-trace) watches RhysBot’s latest private turns. The authenticated bridge uses a separate read-only query scoped to the Telegram owner configured in `~/.config/poppy/telegram-owner`. The stack shows tool names, recorded results, and matching signed Commonplace requests. Message contents, arguments and tool results stay out of the trace payload. This view refreshes as Hermes saves events to its session database.
+
 ## PAP 1.0 capabilities
 
 | Part of PAP | Hermes integration |

@@ -34,13 +34,61 @@ export function readPapReceipt(content) {
   }
 }
 
-export function openHermesTraceStore(path) {
+function openTelegramTrace(db, owner) {
+  if (!/^\d{5,20}$/.test(owner ?? '')) return undefined;
+  const turns = db.prepare(`SELECT m.id, m.session_id, m.timestamp, length(m.content) AS characters
+    FROM messages m JOIN sessions s ON s.id = m.session_id
+    WHERE s.source = 'telegram' AND s.chat_type = 'dm' AND s.user_id = ? AND s.chat_id = ?
+      AND m.role = 'user' AND coalesce(m.active, 1) = 1
+    ORDER BY m.id DESC LIMIT 5`);
+  const events = db.prepare(`SELECT id, timestamp, role, tool_call_id, tool_name, length(content) AS characters,
+    finish_reason, substr(tool_calls, 1, 32769) AS calls, CASE WHEN tool_name = ? THEN substr(content, 1, 32769) END AS pap
+    FROM messages WHERE session_id = ? AND id > ? AND coalesce(active, 1) = 1
+      AND id < coalesce((SELECT min(id) FROM messages WHERE session_id = ? AND id > ? AND role = 'user' AND coalesce(active, 1) = 1), 9223372036854775807)
+      AND role IN ('assistant', 'tool') ORDER BY id LIMIT 120`);
+  const toolName = (name) => typeof name === 'string' && /^[a-z0-9_.:-]{1,96}$/i.test(name) ? name : null;
+
+  return () => turns.all(owner, owner).map(({ id, session_id, timestamp, characters }) => {
+    const tools = new Map();
+    let reply = null;
+    for (const event of events.all(papTool, session_id, id, session_id, id)) {
+      if (event.role === 'assistant') {
+        if (event.calls) {
+          let calls;
+          try { calls = JSON.parse(event.calls); } catch { continue; }
+          if (!Array.isArray(calls) || !calls.length) {
+            if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters };
+            continue;
+          }
+          reply = null;
+          for (const call of calls.slice(0, 32)) {
+            const name = toolName(call?.function?.name);
+            if (name && typeof call.id === 'string' && call.id.length <= 250) {
+              tools.set(call.id, { name, state: 'Called', timestamp: event.timestamp });
+            }
+          }
+        } else if (event.characters > 0 && event.finish_reason === 'stop') reply = { characters: event.characters };
+      } else {
+        const name = toolName(event.tool_name);
+        if (!name) continue;
+        const key = event.tool_call_id || 'row-' + event.id;
+        const receipt = event.pap?.length <= 32768 ? readPapReceipt(event.pap) : null;
+        tools.set(key, { name, state: 'Result recorded', timestamp: tools.get(key)?.timestamp ?? event.timestamp,
+          ...(receipt && { pap: receipt }) });
+      }
+    }
+    return { id, timestamp, characters, tools: [...tools.values()].slice(0, 60), reply };
+  });
+}
+
+export function openHermesTraceStore(path, telegramOwner) {
   const db = new DatabaseSync(path, { readOnly: true, timeout: 100 });
   const cursor = db.prepare('SELECT coalesce(max(id), 0) AS id FROM messages WHERE session_id = ?');
   const entries = db.prepare(`SELECT id, role, tool_name, timestamp, substr(content, 1, 32769) AS content
     FROM messages WHERE session_id = ? AND id > ? AND (role = 'user' OR (role = 'tool' AND tool_name = ?))
     ORDER BY id LIMIT 25`);
   return {
+    telegram: openTelegramTrace(db, telegramOwner),
     cursor: (session) => cursor.get(session).id,
     proof(session, after, fingerprint, completed) {
       const rows = entries.all(session, after, papTool);

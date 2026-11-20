@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Message Poppy</title>
-  <link rel="stylesheet" href="/hermes-chat.css?v=live-trace">
-  <script type="module" src="/hermes-chat.mjs?v=live-trace"></script>
+  <link rel="stylesheet" href="/hermes-chat.css?v=telegram-stack">
+  <script type="module" src="/hermes-chat.mjs?v=telegram-stack"></script>
 </head>
 <body>
   <main>
-    <nav aria-label="Poppy"><a href="https://ai.rhyslindmark.com/poppy/">Poppy</a> <a href="https://ai.rhyslindmark.com/poppy/agent-simulations">Simulations</a> <a href="https://ai.rhyslindmark.com/poppy/hermes-conformance">PAP conformance</a></nav>
+    <nav aria-label="Poppy"><a href="https://ai.rhyslindmark.com/poppy/">Poppy</a> <a href="/">Web chat</a> <a href="/?view=telegram">Telegram trace</a> <a href="https://ai.rhyslindmark.com/poppy/hermes-conformance">PAP conformance</a></nav>
     <h1>Message Poppy</h1>
     <form id="connect">
       <label for="key">Poppy access key</label>
@@ -18,6 +18,10 @@
       <button>Connect to Hermes</button>
     </form>
     <p id="status" role="status"></p>
+    <section id="telegram-trace" aria-label="RhysBot Telegram stack trace" hidden>
+      <div class="telegram-toolbar"><p id="telegram-status" role="status"></p><button id="telegram-disconnect" type="button">Disconnect</button></div>
+      <ol id="telegram-turns"></ol>
+    </section>
     <div id="live-layout" hidden><section id="conversation" aria-label="Conversation">
       <ol id="messages" role="log" aria-label="Messages"></ol>
       <form id="send">

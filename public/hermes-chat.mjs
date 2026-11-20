@@ -11,6 +11,15 @@ const papEvidence = document.querySelector('#pap-evidence');
 const traceStatus = document.querySelector('#trace-status');
 const papStatus = document.querySelector('#pap-status');
 const example = document.querySelector('#example');
+const telegramMode = new URL(location.href).searchParams.get('view') === 'telegram';
+const telegram = document.querySelector('#telegram-trace');
+const telegramStatus = document.querySelector('#telegram-status');
+const telegramTurns = document.querySelector('#telegram-turns');
+if (telegramMode) {
+  document.querySelector('h1').textContent = 'Telegram stack trace';
+  document.title = 'RhysBot Telegram stack trace';
+  document.querySelector('a[href="/?view=telegram"]').setAttribute('aria-current', 'page');
+}
 let key = '';
 let running;
 let timer;
@@ -19,6 +28,67 @@ let busy = false;
 let pending;
 let traceKey;
 let displayedRun;
+let telegramKey;
+
+function renderTelegram(turns) {
+  const version = JSON.stringify(turns);
+  if (version === telegramKey) return;
+  telegramKey = version;
+  const expanded = new Map([...telegramTurns.querySelectorAll('details')].map((el) => [el.dataset.frame, el.open]));
+  const frame = (parent, key, title, open) => {
+    const item = document.createElement('li');
+    const detail = document.createElement('details');
+    const summary = document.createElement('summary');
+    const children = document.createElement('ol');
+    detail.dataset.frame = key;
+    detail.open = expanded.get(key) ?? open;
+    summary.textContent = title;
+    detail.append(summary, children);
+    item.append(detail);
+    parent.append(item);
+    return children;
+  };
+  const line = (parent, title) => {
+    const child = document.createElement('li');
+    child.textContent = title;
+    parent.append(child);
+  };
+  telegramTurns.replaceChildren();
+  for (const [position, turn] of turns.entries()) {
+    const time = new Date(turn.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    const state = turn.reply ? 'Reply recorded' : turn.tools.length ? 'Tool activity' : 'Message recorded';
+    const user = frame(telegramTurns, String(turn.id), `${time} · Telegram → Hermes · ${state}`, position === 0);
+    line(user, `User message · text · ${turn.characters ?? 0} characters`);
+    for (const [index, tool] of turn.tools.entries()) {
+      const name = tool.name === 'mcp__poppy_pap__prepare_commonplace_edition' ? 'prepare_commonplace_edition' : tool.name;
+      const label = `${name} · ${tool.state}${tool.pap ? ' · PAP 1.0' : ''}`;
+      if (!tool.pap) { line(user, label); continue; }
+      const children = frame(user, `${turn.id}-${index}`, label, position === 0);
+      for (const req of tool.pap.requests ?? [tool.pap]) {
+        line(children, `${req.method} ${req.path} → HTTP ${req.status ?? req.http_status}`);
+      }
+      line(children, 'Signed guest Session · delegated ES256 · Commonplace returned HTTP 200');
+    }
+    if (turn.reply) line(user, `Hermes → Telegram · reply recorded · ${turn.reply.characters} characters`);
+  }
+}
+
+async function trackTelegram(currentGeneration = generation) {
+  if (currentGeneration !== generation) return;
+  if (!document.hidden) {
+    try {
+      const result = await call({ view: 'telegram' });
+      if (currentGeneration !== generation) return;
+      renderTelegram(result.turns);
+      const label = result.turns.length ? 'Watching RhysBot’s private Telegram chat.' : 'Waiting for a RhysBot Telegram message.';
+      if (telegramStatus.textContent !== label) telegramStatus.textContent = label;
+    } catch (error) {
+      if (currentGeneration !== generation) return;
+      telegramStatus.textContent = error.message + ' Retrying…';
+    }
+  }
+  timer = setTimeout(() => trackTelegram(currentGeneration), 1500);
+}
 
 function item(target, title, data) {
   const li = document.createElement('li');
@@ -74,8 +144,9 @@ function showMessage(speaker, text) {
   messages.append(item);
 }
 
-async function call({ method = 'GET', run, body } = {}) {
+async function call({ method = 'GET', run, body, view } = {}) {
   const url = new URL('/message', location.origin);
+  if (view) url.searchParams.set('view', view);
   if (run) {
     url.searchParams.set('run', run);
     if (method === 'GET') url.searchParams.set('trace', '1');
@@ -139,8 +210,13 @@ connect.addEventListener('submit', async (event) => {
     await call();
     keyField.value = '';
     connect.hidden = true;
-    conversation.hidden = false;
     status.textContent = '';
+    if (telegramMode) {
+      telegram.hidden = false;
+      await trackTelegram();
+      return;
+    }
+    conversation.hidden = false;
     const run = new URL(location.href).searchParams.get('run');
     if (run) track(run);
     messageField.focus();
@@ -214,6 +290,18 @@ document.querySelector('#disconnect').addEventListener('click', () => {
   showTrace(null, 'idle');
   status.textContent = '';
   conversation.hidden = true;
+  connect.hidden = false;
+  keyField.focus();
+});
+
+document.querySelector('#telegram-disconnect').addEventListener('click', () => {
+  generation += 1;
+  clearTimeout(timer);
+  key = '';
+  telegramKey = undefined;
+  telegramTurns.replaceChildren();
+  telegramStatus.textContent = '';
+  telegram.hidden = true;
   connect.hidden = false;
   keyField.focus();
 });

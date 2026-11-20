@@ -103,9 +103,17 @@ write('index.html', page('Personal Agent Protocol demo',
 
 const agentStyle = '<link rel="stylesheet" href="/poppy/agent-chat.css">';
 if (ownerOrigin) {
+  const telegramView = new URL(ownerOrigin);
+  telegramView.searchParams.set('view', 'telegram');
+  write('telegram-trace.html', page('RhysBot Telegram stack trace',
+    reportHeading('RhysBot Telegram stack trace', 'Keep this tab open while you chat with RhysBot in Telegram. The private trace nests tool calls and PAP requests under each turn.') +
+    '<p><a class="site-button" href="' + escape(telegramView.href) + '" rel="noreferrer">Open Telegram stack trace</a></p>' +
+    '<p>Sign in with your Poppy access key. From the Poppy checkout on your Mac, run <code>npm run ask -- --copy-access-key</code> to copy it.</p>' +
+    '<p><a href="/poppy/hermes">Hermes web chat</a></p>'));
   write('hermes.html', page('Message Hermes',
     reportHeading('Message Hermes', 'Rhys’s private Poppy agent runs on DigitalOcean. The live chat shows calls, tool activity, and PAP evidence as Hermes works.') +
     '<p><a class="site-button" href="' + escape(ownerOrigin.href) + '" rel="noreferrer">Open private Hermes chat</a></p>' +
+    '<p><a href="/poppy/telegram-trace">Watch RhysBot’s Telegram stack trace</a></p>' +
     '<p>On the Mac with the configured Hermes SSH connection, run <code>npm run ask -- --copy-access-key</code> ' +
     'from the Poppy source directory. Paste the key into the private chat to connect.</p>' +
     '<section class="agent-siri"><h2>Use Hermes with Siri</h2><ol>' +
