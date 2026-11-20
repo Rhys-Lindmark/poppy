@@ -201,7 +201,11 @@ export function createAgent({ origin, http, render, trace, entriesFor, sponsors 
       return render.message(res, 400, 'Approval is no longer available.');
     }
     flow.phase = 'done';
-    if (form.get('decision') !== 'approve') {
+    const approved = form.get('decision') === 'approve';
+    const entry = trace('User → Agent', 'POST', '/agent/approval', null,
+      { decision: approved ? 'Approved the reviewed terms' : 'Declined the reviewed terms' }, flow.id);
+    res.once('finish', () => { entry.status = res.statusCode; });
+    if (!approved) {
       sponsors.record('change_declined', flow.analyticsId);
       return render.message(res, 200, 'Delivery change declined.');
     }
@@ -210,9 +214,6 @@ export function createAgent({ origin, http, render, trace, entriesFor, sponsors 
     if (![operation_id, revision].every((value) => typeof value === 'string' && /^[\w-]+$/.test(value))) {
       throw new Error('Invalid operation references');
     }
-    const entry = trace('User → Agent', 'POST', '/agent/approval', null,
-      { decision: 'Approved the reviewed terms' }, flow.id);
-    res.once('finish', () => { entry.status = res.statusCode; });
     const approval = 'operation_id="' + operation_id + '", revision="' + revision +
       '", approver="user", approved_at=' + now() + ', input_type="tap", reference="' + randomId() + '"';
     const result = checked(await api(flow, 'POST', '/api/delivery', {

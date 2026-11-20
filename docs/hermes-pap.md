@@ -6,6 +6,10 @@ Rhys's private Poppy runs on the Docker host described in [hermes-ops](https://g
 
 The private HTTPS listener serves the browser and a bearer-authenticated `/message` endpoint. It uses Caddy and a renewable Let's Encrypt IP certificate on the existing DigitalOcean host. The native Hermes Runs API stays on loopback. The public visual covers the [observed Commonplace request](https://ai.rhyslindmark.com/poppy/hermes-conformance) and the seeded delivery sandbox.
 
+The [agent simulations](https://ai.rhyslindmark.com/poppy/agent-simulations) replay three scripted scenarios captured from separate, seeded HTTPS sandbox runs during the site build. Run `node scripts/capture-agent-simulations.mjs` to regenerate them. Expand a step to inspect request and response fields with credential values redacted.
+
+The private chat polls `/message?run=…&trace=1`. The bridge listens to the native Hermes run stream and exposes a small set of tool event fields. Its read-only history lookup matches the prompt, session, and tool completion time before attaching Commonplace evidence. An ambiguous match leaves the PAP evidence empty. The signed request receipt records the Company’s HTTP response. The signature test verifies the cryptography separately.
+
 ## PAP 1.0 capabilities
 
 | Part of PAP | Hermes integration |

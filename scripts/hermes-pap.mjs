@@ -45,12 +45,15 @@ export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fet
   const subject = createHmac('sha256', pairwiseKey).update(companyOrigin).digest('base64url');
   const headersFor = guestSession({ root: identity.key, audience: companyOrigin, subject });
   const signedRequests = [];
+  const trace = [{ method: 'GET', path: '/.well-known/oauth-protected-resource', status: metadata.status }];
   const proposal = await readProposal(companyOrigin, async (url, options) => {
     const path = new URL(url).pathname;
     const isEdition = path === '/poppy/api/edition.json';
     const headers = isEdition ? { ...options.headers, ...headersFor('GET', url) } : options.headers;
     const response = await fetcher(url, { ...options, headers, signal: AbortSignal.timeout(6000) });
-    if (isEdition) signedRequests.push({ method: 'GET', path, status: response.status });
+    const received = { method: 'GET', path, status: response.status };
+    trace.push(received);
+    if (isEdition) signedRequests.push(received);
     return response;
   });
   if (signedRequests.length !== 1) throw new Error('The Company no longer advertises the configured edition endpoint.');
@@ -60,6 +63,7 @@ export async function prepareGuestEdition({ identity, pairwiseKey, fetcher = fet
     protocol_version: version,
     client_id: identity.metadata.client_id,
     signed_requests: signedRequests,
+    trace,
     approval_url: companyOrigin + '/poppy/agent?review=' + proposal.revision,
   };
 }

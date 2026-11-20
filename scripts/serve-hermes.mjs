@@ -1,12 +1,23 @@
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { createHermesHandler } from '../src/hermes-http.mjs';
+import { openHermesTraceStore } from './hermes-trace-store.mjs';
 
 const port = 8652;
+let traceStore;
+try {
+  traceStore = openHermesTraceStore(join(process.env.HERMES_HOME ?? join(homedir(), '.hermes'), 'state.db'));
+} catch {
+  // Keep event tracing and chat available if the local history is unavailable.
+  traceStore = {};
+}
 const handle = createHermesHandler({
   accessToken: process.env.POPPY_ACCESS_TOKEN,
   hermesToken: process.env.API_SERVER_KEY,
   publicPage: process.env.POPPY_OWNER_PAGE,
+  traceStore,
 });
 
 createServer({ requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {

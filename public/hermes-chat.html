@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Message Poppy</title>
-  <link rel="stylesheet" href="/hermes-chat.css">
-  <script type="module" src="/hermes-chat.mjs"></script>
+  <link rel="stylesheet" href="/hermes-chat.css?v=live-trace">
+  <script type="module" src="/hermes-chat.mjs?v=live-trace"></script>
 </head>
 <body>
   <main>
-    <nav aria-label="Poppy"><a href="https://ai.rhyslindmark.com/poppy/">Poppy</a> <a href="https://ai.rhyslindmark.com/poppy/hermes-conformance">PAP conformance</a></nav>
+    <nav aria-label="Poppy"><a href="https://ai.rhyslindmark.com/poppy/">Poppy</a> <a href="https://ai.rhyslindmark.com/poppy/agent-simulations">Simulations</a> <a href="https://ai.rhyslindmark.com/poppy/hermes-conformance">PAP conformance</a></nav>
     <h1>Message Poppy</h1>
     <form id="connect">
       <label for="key">Poppy access key</label>
@@ -18,7 +18,7 @@
       <button>Connect to Hermes</button>
     </form>
     <p id="status" role="status"></p>
-    <section id="conversation" aria-label="Conversation" hidden>
+    <div id="live-layout" hidden><section id="conversation" aria-label="Conversation">
       <ol id="messages" role="log" aria-label="Messages"></ol>
       <form id="send">
         <label for="message">Message</label>
@@ -26,8 +26,16 @@
         <button id="submit">Send</button>
         <button id="stop" type="button" hidden>Stop task</button>
       </form>
+      <button id="example" type="button">Run PAP example</button>
       <button id="disconnect" type="button">Disconnect</button>
-    </section>
+    </section><section id="trace" aria-labelledby="trace-title">
+      <h2 id="trace-title">Live run trace</h2>
+      <p id="trace-status" role="status">Send a message to see how Hermes handles it.</p>
+      <ol id="trace-events" aria-label="Run activity"></ol>
+      <h3>PAP evidence</h3>
+      <p id="pap-status">PAP evidence appears when Hermes calls the Commonplace tool.</p>
+      <ol id="pap-evidence" aria-label="PAP requests"></ol>
+    </section></div>
   </main>
 </body>
 </html>

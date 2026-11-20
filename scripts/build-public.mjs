@@ -81,6 +81,7 @@ write('index.html', page('Personal Agent Protocol demo',
   '<p class="brand-intro">An open protocol for every company and every personal agent.</p>' +
   '<div class="site-links"><a class="site-button" href="' + (ownerOrigin ? '/poppy/hermes">Message Hermes' : '/poppy/agent">Message the agent') + '</a>' +
   '<a href="#commonplace-demo">Try the Commonplace demo</a>' +
+  '<a href="/poppy/agent-simulations">Run agent simulations</a>' +
   '<a href="/poppy/hermes-conformance">See how Hermes uses PAP</a>' +
   '<a href="/poppy/cookbooks/">Browse the cookbooks</a></div></div></section>' +
   '<section class="site-band" id="commonplace-demo" aria-labelledby="commonplace-title"><div class="site-wrap site-demo-layout">' +
@@ -103,7 +104,7 @@ write('index.html', page('Personal Agent Protocol demo',
 const agentStyle = '<link rel="stylesheet" href="/poppy/agent-chat.css">';
 if (ownerOrigin) {
   write('hermes.html', page('Message Hermes',
-    reportHeading('Message Hermes', 'Rhys’s private Poppy agent runs on his DigitalOcean Docker host.') +
+    reportHeading('Message Hermes', 'Rhys’s private Poppy agent runs on DigitalOcean. The live chat shows calls, tool activity, and PAP evidence as Hermes works.') +
     '<p><a class="site-button" href="' + escape(ownerOrigin.href) + '" rel="noreferrer">Open private Hermes chat</a></p>' +
     '<p>On the Mac with the configured Hermes SSH connection, run <code>npm run ask -- --copy-access-key</code> ' +
     'from the Poppy source directory. Paste the key into the private chat to connect.</p>' +
@@ -115,13 +116,14 @@ if (ownerOrigin) {
     '<li>Get <code>run_url</code> from the response with <strong>Get Dictionary Value</strong> and pass it to <strong>Open URLs</strong>. ' +
     'Sign in to see the reply as Hermes works.</li></ol>' +
     '<p><a href="https://support.apple.com/guide/shortcuts/apd07c25bb38/ios">Apple’s Siri Shortcuts guide</a></p></section>' +
-    '<p><a href="/poppy/hermes-conformance">See how Hermes uses PAP</a> · <a href="/poppy/agent">Try the public Commonplace demo</a></p>',
+    '<p><a href="/poppy/agent-simulations">Run agent simulations</a> · <a href="/poppy/hermes-conformance">See how Hermes uses PAP</a> · <a href="/poppy/agent">Try the public Commonplace demo</a></p>',
     { head: agentStyle, bodyClass: 'site-report poppy-agent' }));
 }
 write('agent.html', page('Message the Poppy agent',
   reportHeading('Message the Poppy agent', 'Ask Poppy to find a free reading edition from Commonplace or explain what’s in it.') +
   '<div class="agent-links">' + (ownerOrigin ? '<a href="/poppy/hermes">Open private Hermes</a> · ' : '') +
   '<a href="/poppy/siri">Use the Commonplace demo with Siri</a> · ' +
+  '<a href="/poppy/agent-simulations">Run agent simulations</a> · ' +
   '<a href="/poppy/hermes-conformance">See how Hermes uses PAP</a></div>' +
   '<ol id="agent-messages" class="agent-messages" role="log" aria-label="Conversation" tabindex="0">' +
   '<li><strong>Poppy</strong><p>What would you like to read? Try “Find me a reading edition.”</p></li></ol>' +
@@ -168,6 +170,24 @@ write('poppyval.html', page('PoppyVal', poppyvalMarkup(evidence), { active: '/po
 const trace = JSON.parse(execFileSync(process.execPath, [join(repo, 'scripts/capture-delivery-trace.mjs')], {
   encoding: 'utf8', timeout: 10000,
 }));
+const simulations = JSON.parse(execFileSync(process.execPath, [join(repo, 'scripts/capture-agent-simulations.mjs')], {
+  encoding: 'utf8', timeout: 10000,
+}));
+json('agent-simulations.json', simulations);
+write('agent-simulations.html', page('Agent simulations',
+  reportHeading('Agent simulations', 'Follow a training agent’s scripted prompt through recordings from the seeded PAP 1.0 sandbox.') +
+  '<section id="simulation" aria-label="Training-agent simulator"><div class="simulation-controls">' +
+  '<div><label for="scenario">Scenario</label><select id="scenario">' +
+  simulations.scenarios.map(({ id, title }) => '<option value="' + escape(id) + '">' + escape(title) + '</option>').join('') +
+  '</select></div><button type="button" class="primary" data-run disabled>Run simulation</button>' +
+  '<button type="button" data-pause disabled>Pause</button><button type="button" data-next disabled>Next step</button></div>' +
+  '<p role="status">Loading simulations…</p><div class="simulation-layout">' +
+  '<section aria-labelledby="sim-chat"><h2 id="sim-chat">Conversation</h2><ol data-chat></ol></section>' +
+  '<section aria-labelledby="sim-wire"><h2 id="sim-wire">Calls and data</h2><ol data-events></ol></section></div></section>' +
+  '<p class="site-links"><a href="/poppy/agent-simulations.json">Download scenario data</a>' +
+  (ownerOrigin ? '<a href="/poppy/hermes">Open live Hermes</a>' : '') + '</p>',
+  { head: '<link rel="stylesheet" href="/poppy/agent-simulations.css"><script type="module" src="/poppy/agent-simulations.mjs"></script>',
+    bodyClass: 'site-report simulation-page' }));
 json('delivery-trace.json', trace);
 write('protocol-trace.html', page('Delivery rescheduling trace',
   reportHeading('Delivery rescheduling trace', 'The seeded Demo Store moved the order from Friday to ' +
@@ -197,6 +217,7 @@ write('sponsors.html', page('Hackathon sponsors',
 write('sponsors.md', sponsors);
 
 for (const name of ['styles.css', 'tokens.css', 'branding.css', 'hermes-conformance.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
+  'agent-simulations.css', 'agent-simulations.mjs',
   'cookbook-cover.jpg', 'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {

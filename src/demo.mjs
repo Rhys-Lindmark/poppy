@@ -29,7 +29,7 @@ const styles = new Map(['/styles.css', '/tokens.css'].map((path) =>
   [path, readFileSync(new URL('../public' + path, import.meta.url))]));
 const userPosts = new Set(['/agent/start', '/oauth/authorize', '/oauth/persona/check', '/agent/approval']);
 
-export async function startSandbox({ port = 0, sponsors = createSponsors() } = {}) {
+export async function startSandbox({ port = 0, sponsors = createSponsors(), observeTrace } = {}) {
   const tls = localCertificate();
   let handle = (_req, res) => json(res, 503, { error: 'starting' });
   const server = createServer(tls, (req, res) => {
@@ -51,6 +51,7 @@ export async function startSandbox({ port = 0, sponsors = createSponsors() } = {
     const entry = { actor, method, path, status, details, flowId };
     events.push(entry);
     if (events.length > 300) events.shift();
+    observeTrace?.(entry);
     return entry;
   };
   const entriesFor = (flowId) => flowId ? events.filter((entry) => entry.flowId === flowId) : [];

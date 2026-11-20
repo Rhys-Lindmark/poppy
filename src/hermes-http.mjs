@@ -1,3 +1,5 @@
+import { papTool, readHermesEvents } from './hermes-events.mjs';
+
 const runPattern = /^run_[A-Za-z0-9_-]{3,100}$/;
 const keyPattern = /^[A-Za-z0-9_-]{32,128}$/;
 const session = 'poppy-personal-v1';
@@ -44,11 +46,12 @@ async function boundedJson(body, limit) {
 }
 
 export function createHermesHandler({ accessToken, hermesToken, origin = 'http://127.0.0.1:8642',
-  publicPage = 'https://ai.rhyslindmark.com/poppy/agent', fetcher = fetch }) {
+  publicPage = 'https://ai.rhyslindmark.com/poppy/agent', fetcher = fetch, traceStore }) {
   if (!keyPattern.test(accessToken || '') || typeof hermesToken !== 'string' || hermesToken.length < 24) {
     throw new Error('Poppy and Hermes access tokens are required.');
   }
   const admissions = new Map();
+  const traces = new Map();
   async function call(path, options = {}) {
     const result = await fetcher(new URL(path, origin), {
       ...options, redirect: 'error', signal: AbortSignal.timeout(8000), headers: {
@@ -66,6 +69,43 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
     const reviewUrl = new URL(publicPage);
     reviewUrl.searchParams.set('run', run);
     return { run_id: run, status, reply, run_url: reviewUrl.href, done: terminal.has(status) };
+  }
+
+  async function collect(run, trace) {
+    try {
+      const stream = await fetcher(new URL('/v1/runs/' + run + '/events', origin), {
+        redirect: 'error', headers: { Authorization: 'Bearer ' + hermesToken, Accept: 'text/event-stream' },
+        signal: AbortSignal.timeout(900000),
+      });
+      if (!stream.ok || !stream.body) {
+        await stream.body?.cancel().catch(() => {});
+        trace.stream = 'unavailable';
+        return;
+      }
+      trace.stream = 'connected';
+      await readHermesEvents(stream.body, run, (event, time) => {
+        if (trace.tools.length < 100) trace.tools.push(event);
+        if (event.type === 'tool.completed' && event.tool === papTool && event.ok && time !== null && trace.completed.length < 8) {
+          trace.completed.push(time);
+        }
+      });
+      trace.stream = 'closed';
+    } catch {
+      trace.stream = 'unavailable';
+    }
+  }
+
+  function traceView(run) {
+    const trace = traces.get(run);
+    if (!trace) return { stream: 'unavailable', tools: [], pap: [] };
+    if (trace.cursor !== null && trace.proofs.size < trace.completed.length) {
+      try {
+        for (const { id, receipt } of traceStore.proof(session, trace.cursor, trace.fingerprint, trace.completed)) {
+          trace.proofs.set(id, receipt);
+        }
+      } catch { /* A busy history database will be checked on the next poll. */ }
+    }
+    return { stream: trace.stream, request: trace.request, tools: trace.tools, pap: [...trace.proofs.values()] };
   }
 
   return async (request) => {
@@ -100,15 +140,31 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
         for (const [key, record] of admissions) {
           if (record.expires <= timestamp) admissions.delete(key);
         }
+        for (const [key, trace] of traces) {
+          if (trace.expires <= timestamp) traces.delete(key);
+        }
         let record = admissions.get(id);
         if (record && record.signature !== signature) {
           return response({ reply: 'This request ID is already tied to another message.' }, 409);
         }
         if (!record) {
           if (admissions.size >= 256) return response({ reply: 'Too many recent tasks. Try again in a moment.' }, 429);
+          let cursor = null;
+          try { cursor = traceStore?.cursor(session) ?? null; } catch { /* The run can proceed without PAP evidence. */ }
           record = { signature, expires: timestamp + 600000, result: call('/v1/runs', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ input: message, session_id: session }),
+          }).then((admitted) => {
+            const run = admitted.body?.run_id;
+            if (traceStore && runPattern.test(run || '')) {
+              if (traces.size >= 256) traces.delete(traces.keys().next().value);
+              const trace = { cursor, fingerprint: signature, tools: [], completed: [], proofs: new Map(),
+                expires: timestamp + 900000, stream: 'connecting',
+                request: { method: 'POST', path: '/v1/runs', input: 'string', characters: message.length, session_id: 'private' } };
+              traces.set(run, trace);
+              void collect(run, trace);
+            }
+            return admitted;
           }) };
           admissions.set(id, record);
         }
@@ -142,7 +198,9 @@ export function createHermesHandler({ accessToken, hermesToken, origin = 'http:/
       };
       const output = status === 'completed' && typeof result.body.output === 'string'
         ? result.body.output.trim().slice(0, 24000) : '';
-      return response(receipt(run, status, output || messages[status] || (status === 'completed' ? 'Task completed.' : 'Hermes is working on it.')));
+      const payload = receipt(run, status, output || messages[status] || (status === 'completed' ? 'Task completed.' : 'Hermes is working on it.'));
+      if (url.searchParams.get('trace') === '1') payload.trace = traceView(run);
+      return response(payload);
     } catch {
       return response({ reply: 'I couldn’t reach Hermes. Try again in a moment.' }, 502);
     }

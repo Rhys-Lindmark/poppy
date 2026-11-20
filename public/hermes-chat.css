@@ -15,8 +15,8 @@
   background: var(--paper);
 }
 html, body { overflow-x: clip; }
-main { max-width: 42rem; margin: auto; padding: clamp(1rem, 5vw, 3rem); }
-nav { display: flex; gap: 1rem; font-size: 0.9rem; }
+main { max-width: 69rem; margin: auto; padding: clamp(1rem, 5vw, 3rem); }
+nav { display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; font-size: 0.9rem; }
 a { color: var(--accent); text-underline-offset: 0.16em; }
 h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; font-weight: 620; overflow-wrap: break-word; }
 label { display: block; font-weight: 620; }
@@ -27,6 +27,21 @@ button { background: var(--accent); color: var(--input); padding: 0.4rem 0.7rem;
 button:disabled { opacity: 0.65; cursor: wait; }
 button[type="button"] { background: transparent; color: var(--accent); }
 #disconnect { margin-top: 1.1rem; }
+#connect { max-width: 30rem; }
+#live-layout:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 2rem; align-items: start; }
+#example { margin-top: 0.8rem; }
+#trace { border-inline-start: 1px solid var(--line); padding-inline-start: 1.5rem; min-width: 0; }
+#trace h2 { margin: 0; font-size: 1.22rem; }
+#trace h3 { margin-bottom: 0.3rem; font-size: 1rem; }
+#trace p { margin-block: 0.45rem; font-size: 0.9rem; }
+#trace ol { margin-block: 0.65rem 0; padding-inline-start: 1.25rem; }
+#trace li + li { margin-top: 0.5rem; }
+#trace summary { cursor: pointer; overflow-wrap: anywhere; font-size: 0.9rem; }
+#trace pre { margin-block: 0.45rem; padding: 0.65rem; border: 1px solid var(--line); background: var(--input); font-size: 0.8rem; overflow: auto; }
+@media (max-width: 50rem) {
+  #live-layout:not([hidden]) { grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
+  #trace { border-inline-start: 0; border-top: 1px solid var(--line); padding: 1rem 0 0; }
+}
 #messages { list-style: none; padding: 0; }
 #messages li { border-bottom: 1px solid var(--line); padding: 0.8rem 0; }
 #messages p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0.2rem 0 0; }
