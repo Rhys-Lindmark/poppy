@@ -151,9 +151,10 @@ export function buildCookbooks({ repo, route, write, page }) {
   const articles = guides.map((guide) => readGuide(repo, guide));
   const head = '<link rel="stylesheet" href="' + route + '/cookbooks.css">' +
     '<script type="module" src="' + route + '/cookbooks.mjs"></script>';
+  const pageOptions = { head, bodyClass: 'cookbook-page', active: '/cookbooks/' };
   for (const guide of articles) {
-    write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide), head, 'cookbook-page'));
+    write('cookbooks/' + guide.slug + '.html', page(guide.title, article(guide), pageOptions));
     write('cookbooks/' + guide.slug + '.md', guide.markdown);
   }
-  write('cookbooks/index.html', page('Personal Agent Protocol cookbooks', index(articles, proposalGroups(repo)), head, 'cookbook-page'));
+  write('cookbooks/index.html', page('Personal Agent Protocol cookbooks', index(articles, proposalGroups(repo)), pageOptions));
 }

@@ -5,6 +5,10 @@ export const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (characte
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
+export function reportHeading(title, introduction) {
+  return '<div class="report-heading"><h1>' + escapeHtml(title) + '</h1><p>' + introduction + '</p></div>';
+}
+
 const observedStates = {
   published: 'Published',
   absent: '404',
@@ -46,16 +50,16 @@ export function coverageMarkup(resultsPath) {
       escape(store.channels?.join(', ') || '—') + '</td></tr>';
   }).join('');
 
-  return '<h1>Ecommerce sales coverage</h1><p>' + escape(market.market) +
-    ', approximately $1.25T. <a href="' + escape(market.marketSource) + '">Census data</a></p>' +
-    '<section><h2>Observed discovery and sales</h2><dl>' +
-    '<dt>Storefronts publishing</dt><dd>' + totals.published.count + ' of ' + scan.stores.length + ' checked</dd>' +
-    '<dt>Estimated sales at publishing merchants with a measured weight</dt><dd>' +
-    dollars(covered.billions) + ' (' + covered.sharePercent + '%)</dd>' +
-    '<dt>Estimated sales at merchants whose discovery URL returned 404</dt><dd>' +
-    dollars(missing.billions) + ' (' + missing.sharePercent + '%)</dd>' +
-    '<dt>Shopify rollout proxy</dt><dd>About ' + dollars(platformProxy.billions) + ' (' + platformProxy.sharePercent +
-    '%), based on reported platform share</dd></dl>' +
+  return reportHeading('Ecommerce sales coverage', escape(market.market) +
+    ', approximately $1.25T. <a href="' + escape(market.marketSource) + '">Census data</a>') +
+    '<section><h2>Observed discovery and sales</h2><dl class="coverage-summary">' +
+    '<div><dt>Storefronts publishing</dt><dd>' + totals.published.count + ' of ' + scan.stores.length + ' checked</dd></div>' +
+    '<div><dt>Estimated sales at publishing merchants with a measured weight</dt><dd>' +
+    dollars(covered.billions) + ' (' + covered.sharePercent + '%)</dd></div>' +
+    '<div><dt>Estimated sales at merchants whose discovery URL returned 404</dt><dd>' +
+    dollars(missing.billions) + ' (' + missing.sharePercent + '%)</dd></div>' +
+    '<div><dt>Shopify rollout proxy</dt><dd>About ' + dollars(platformProxy.billions) + ' (' + platformProxy.sharePercent +
+    '%), based on reported platform share</dd></div></dl>' +
     '<p class="muted">The named-store cohort is purposive. Shopify’s estimate uses reported rollout and market share. ' +
     'The figures describe sales at these sites and public discovery. Live sessions and Poppy-initiated purchases have their own evidence requirements.</p>' +
     '<table class="coverage"><caption>Sales weights</caption><thead><tr><th scope="col">Retailer or platform</th>' +
@@ -102,7 +106,7 @@ export function poppyvalMarkup(evidence) {
         '">Poppy Demo Agent validator</a> also passed discovery.' : '') + '</li>';
   }).join('');
 
-  return '<h1>PoppyVal</h1><p>Versioned capability results for Personal Agents and Companies.</p>' +
+  return reportHeading('PoppyVal', 'Versioned capability results for Personal Agents and Companies.') +
     '<section><h2>Bundled Poppy 1.0 HTTPS sandbox</h2><ul>' +
     evidence.checks.map(({ check, outcome }) => '<li>' + escape(check) + ' · ' + resultLabels[outcome] + '</li>').join('') +
     '</ul><p><a href="protocol-trace.html">Recorded delivery workflow</a></p></section>' +
