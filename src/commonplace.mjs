@@ -1,24 +1,9 @@
-import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { discoverEdition, editionBackup } from '../public/commonplace-client.mjs';
+import { editionBackup } from '../public/commonplace-client.mjs';
+import { companyOrigin, readProposal } from '../public/commonplace-agent.mjs';
 
-const publicOrigin = 'https://ai.rhyslindmark.com';
-
-export async function prepareEdition({ approve, origin = publicOrigin, fetcher = fetch } = {}) {
-  const requests = [];
-  const terms = await discoverEdition(origin, async (url) => {
-    const response = await fetcher(url, {
-      headers: { Accept: 'application/json' }, redirect: 'error',
-      signal: AbortSignal.timeout(6000),
-    });
-    requests.push({ method: 'GET', url, status: response.status });
-    if (!response.ok) {
-      await response.body?.cancel().catch(() => {});
-      throw new Error('Commonplace returned HTTP ' + response.status + '.');
-    }
-    return response.json();
-  });
-  const revision = createHash('sha256').update(JSON.stringify(terms)).digest('base64url');
+export async function prepareEdition({ approve, origin = companyOrigin, fetcher = fetch } = {}) {
+  const { revision, terms, requests } = await readProposal(origin, fetcher);
   if (approve !== undefined && approve !== revision) {
     return { status: 'terms_changed', revision, terms, requests };
   }

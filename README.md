@@ -2,6 +2,8 @@
 
 [Public Poppy demo with Commonplace](https://ai.rhyslindmark.com/poppy/).
 
+[Message the Poppy agent](https://ai.rhyslindmark.com/poppy/agent) or [set up Ask Poppy in Siri](https://ai.rhyslindmark.com/poppy/siri). Both use the public Commonplace workflow. The chat accepts requests to find an edition or ask about its price, format, and sources. The browser handles approval and download.
+
 A local Poppy 1.0 Personal Agent and store. The sandbox demonstrates discovery and signed delivery requests, scoped Direct Sign-In, and approval of exact terms using Operations 3.
 
 ## Run

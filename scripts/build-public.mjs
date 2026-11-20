@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, copyFileSync, cpSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import edition from '../data/commonplace-edition.json' with { type: 'json' };
 import storeResults from '../data/storefront-results.json' with { type: 'json' };
@@ -20,6 +20,7 @@ const siteOrigin = 'https://ai.rhyslindmark.com';
 const route = '/poppy';
 const protocolDocs = 'https://personalagentprotocol.org/docs/introduction';
 const links = [
+  ['/agent', 'Message the agent'],
   ['/cookbooks/', 'Cookbooks'],
   ['/protocol-trace', 'Delivery trace'], ['/coverage', 'Sales coverage'],
   ['/poppyval', 'PoppyVal'], ['/sponsors', 'Sponsors'],
@@ -63,7 +64,8 @@ json('api/edition.json', edition);
 write('index.html', page('Personal Agent Protocol demo',
   '<section class="brand-hero" aria-labelledby="protocol"><div class="site-wrap"><h1 id="protocol">Personal Agent Protocol</h1>' +
   '<p class="brand-intro">An open protocol for every company and every personal agent.</p>' +
-  '<div class="site-links"><a class="site-button" href="#commonplace-demo">Try the Commonplace demo</a>' +
+  '<div class="site-links"><a class="site-button" href="/poppy/agent">Message the agent</a>' +
+  '<a href="#commonplace-demo">Try the Commonplace demo</a>' +
   '<a href="/poppy/cookbooks/">Browse the cookbooks</a></div></div></section>' +
   '<section class="site-band" id="commonplace-demo" aria-labelledby="commonplace-title"><div class="site-wrap site-demo-layout">' +
   '<div><h2 id="commonplace-title">Commonplace store demo</h2><p>Prepare a reading edition from the ' +
@@ -81,6 +83,42 @@ write('index.html', page('Personal Agent Protocol demo',
   '<div class="site-links"><a class="site-button" href="/poppy/protocol-trace#replay">Replay a recorded run</a>' +
   '<a href="/poppy/source.tar.gz">Download the source</a></div></div></section>',
   { head: '<script type="module" src="/poppy/commonplace-demo.mjs"></script>', bodyClass: 'poppy-home', active: '/' }));
+
+const agentStyle = '<link rel="stylesheet" href="/poppy/agent-chat.css">';
+write('agent.html', page('Message the Poppy agent',
+  reportHeading('Message the Poppy agent', 'Ask Poppy to find a free reading edition from Commonplace or explain what’s in it.') +
+  '<div class="agent-links"><a href="/poppy/siri">Use with Siri</a></div>' +
+  '<ol id="agent-messages" class="agent-messages" role="log" aria-label="Conversation" tabindex="0">' +
+  '<li><strong>Poppy</strong><p>What would you like to read? Try “Find me a reading edition.”</p></li></ol>' +
+  '<form class="agent-form" id="agent-form" method="post" action="/poppy/api/message"><label for="agent-message">Message Poppy</label>' +
+  '<input id="agent-message" name="message" maxlength="400" placeholder="Find me a reading edition" required autocomplete="off">' +
+  '<button type="submit" class="primary">Send</button></form><p id="agent-status" class="agent-status" role="status"></p>' +
+  '<section class="agent-review" id="agent-review" aria-labelledby="agent-edition-title" hidden>' +
+  '<h2 id="agent-edition-title"></h2><p id="agent-terms"></p>' +
+  '<details><summary>Quotation sources</summary><ul id="agent-sources"></ul></details>' +
+  '<details><summary>Store requests</summary><ul id="agent-requests"></ul></details>' +
+  '<p><button type="button" id="agent-approve" class="primary">Approve and download</button></p>' +
+  '<p>Use <a href="/commonplace/">Commonplace</a>’s Restore action to import your download.</p></section>',
+  { head: agentStyle + '<script type="module" src="/poppy/agent-chat.mjs"></script>',
+    bodyClass: 'site-report poppy-agent', active: '/agent' }));
+
+write('siri.html', page('Ask Poppy with Siri',
+  reportHeading('Ask Poppy with Siri', 'Set up a shortcut once, then say “Siri, Ask Poppy” and dictate your message.') +
+  '<section class="agent-siri"><h2>Create the shortcut</h2><ol>' +
+  '<li>In Shortcuts on your iPhone, create a shortcut named <strong>Ask Poppy</strong>.</li>' +
+  '<li>Add <strong>Dictate Text</strong>.</li>' +
+  '<li>Add <strong>Get Contents of URL</strong> for <code>https://ai.rhyslindmark.com/poppy/api/message</code>. ' +
+  'Choose <strong>POST</strong> and set the request body to <strong>JSON</strong>. ' +
+  'Add a text field named <code>message</code> and set its value to <strong>Dictated Text</strong>.</li>' +
+  '<li>Add <strong>Get Dictionary Value</strong> to get <code>reply</code> from <strong>Contents of URL</strong>.</li>' +
+  '<li>Add <strong>Speak Text</strong> and use the dictionary value as its input.</li></ol>' +
+  '<p>Try “Find me a reading edition” or “How much does it cost?”</p>' +
+  '<h2>Open an edition for approval</h2><p>To continue in Safari, get <code>review_url</code> from ' +
+  '<strong>Contents of URL</strong> and pass it to <strong>Open URLs</strong> when the value exists. ' +
+  'The browser asks you to approve the download.</p>' +
+  '<p><a href="/poppy/agent">Back to web chat</a> · ' +
+  '<a href="https://support.apple.com/guide/shortcuts/apd07c25bb38/ios">Apple’s Siri Shortcuts guide</a></p></section>',
+  { head: agentStyle, bodyClass: 'site-report poppy-agent', active: '/agent' }));
 
 buildCookbooks({ repo, route, write, page });
 
@@ -124,7 +162,7 @@ write('sponsors.html', page('Hackathon sponsors',
 write('sponsors.md', sponsors);
 
 for (const name of ['styles.css', 'tokens.css', 'branding.css', 'commonplace-demo.mjs', 'commonplace-client.mjs',
-  'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs']) {
+  'cookbooks.css', 'cookbooks.mjs', 'trace-replay.mjs', 'agent-chat.css', 'agent-chat.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +
@@ -132,5 +170,26 @@ for (const name of ['styles.css', 'tokens.css', 'branding.css', 'commonplace-dem
   } else copyFileSync(path, join(site, name));
 }
 cpSync(join(repo, 'public/fonts'), join(site, 'fonts'), { recursive: true });
+const functions = join(output, 'functions');
+for (const filename of ['src/chat-http.mjs', 'public/commonplace-agent.mjs', 'public/commonplace-client.mjs']) {
+  const target = join(functions, '_poppy', filename);
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(join(repo, filename), target);
+}
+const agentRoute = join(functions, 'poppy/api');
+mkdirSync(agentRoute, { recursive: true });
+writeFileSync(join(agentRoute, 'message.js'), `import { companyOrigin, handleAgentMessage } from '../../_poppy/src/chat-http.mjs';
+import { poppyDiscovery } from '../../_lib/poppy-discovery.js';
+
+export function onRequest(context) {
+  if (new URL(context.request.url).origin !== companyOrigin) {
+    return new Response(null, { status: 404 });
+  }
+  return handleAgentMessage(context.request, (url, options) => {
+    if (url === companyOrigin + '/.well-known/poppy.json') return Response.json(poppyDiscovery);
+    return context.env.ASSETS.fetch(new Request(url, options));
+  });
+}
+`);
 execFileSync('tar', ['-czf', join(site, 'source.tar.gz'), '-C', repo,
   'README.md', 'GLOSSARY.md', 'package.json', 'src', 'public', 'data', 'test', 'docs', 'scripts'], { timeout: 10000, env: { ...process.env, COPYFILE_DISABLE: '1' } });
