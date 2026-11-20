@@ -6,6 +6,7 @@ import edition from '../data/commonplace-edition.json' with { type: 'json' };
 import storeResults from '../data/storefront-results.json' with { type: 'json' };
 import { coverageMarkup, escapeHtml as escape, poppyvalMarkup } from '../src/report-views.mjs';
 import { traceTable } from '../src/views.mjs';
+import { buildCookbooks } from './build-cookbooks.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const output = resolve(process.argv[2] || 'dist');
@@ -23,12 +24,12 @@ const links = [
   [route + '/poppyval.html', 'PoppyVal'],
   [route + '/sponsors.html', 'Sponsors'],
 ];
-function page(title, body, script = '') {
+function page(title, body, head = '', bodyClass = '') {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta name="description" content="Poppy Personal Agent Protocol demo with Commonplace."><title>' +
-    escape(title) + '</title><link rel="stylesheet" href="' + route + '/styles.css">' + script +
-    '</head><body><header><nav aria-label="Main">' +
+    escape(title) + '</title><link rel="stylesheet" href="' + route + '/styles.css">' + head +
+    '</head><body' + (bodyClass ? ' class="' + escape(bodyClass) + '"' : '') + '><header><nav aria-label="Main">' +
     links.map(([href, label]) => '<a href="' + href + '">' + label + '</a>').join('') +
     '</nav></header><main>' + body + '</main></body></html>\n';
 }
@@ -64,22 +65,7 @@ write('index.html', page('Poppy', '<section><h1>Poppy</h1><p>Prepare a reading e
   '<a href="/poppy/protocol-trace.html">View a recorded run</a>.</p></section>',
   '<script type="module" src="/poppy/commonplace-demo.mjs"></script>'));
 
-const catalog = readFileSync(join(repo, 'docs/cookbooks.md'), 'utf8');
-const entries = [...catalog.matchAll(/^\| (\d+) \| ([^|]+) \| ([^|]+) \|$/gm)];
-if (entries.length !== 50) throw new Error('Expected 50 cookbook proposals');
-const guides = ['personal-agent', 'store-discovery', 'direct-sign-in', 'delivery-approval', 'interoperability'];
-const titles = new Map();
-for (const name of guides) {
-  const text = readFileSync(join(repo, 'docs/cookbooks', name + '.md'), 'utf8');
-  titles.set(name, text.split('\n')[0].slice(2));
-  write('cookbooks/' + name + '.html', page(titles.get(name),
-    '<h1>' + escape(titles.get(name)) + '</h1><pre class="guide">' + escape(text.split('\n').slice(2).join('\n').replace(/[ \t]+$/gm, '')) + '</pre>'));
-}
-write('cookbooks/index.html', page('Poppy cookbooks', '<h1>Poppy cookbooks</h1><h2>Runnable guides</h2><ul>' +
-  guides.map((name) => '<li><a href="' + name + '.html">' + escape(titles.get(name)) + '</a></li>').join('') +
-  '</ul><section><h2>50 proposals</h2><dl>' +
-  entries.map(([, , title, result]) => '<dt>' + escape(title) + '</dt><dd>' + escape(result) + '</dd>').join('') +
-  '</dl><p><a href="https://personalagentprotocol.org/docs/demos">Community demos</a></p></section>'));
+buildCookbooks({ repo, route, write, page });
 
 json('storefront-results.json', storeResults);
 write('coverage.html', page('Ecommerce sales coverage',
@@ -111,11 +97,11 @@ write('sponsors.html', page('Hackathon sponsors', '<h1>Hackathon sponsors</h1>' 
   '<p class="note"><a href="/poppy/sponsors.md">Setup instructions</a></p>'));
 write('sponsors.md', sponsors);
 
-for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs', 'commonplace-client.mjs']) {
+for (const name of ['styles.css', 'tokens.css', 'commonplace-demo.mjs', 'commonplace-client.mjs', 'cookbooks.css', 'cookbooks.mjs']) {
   const path = join(repo, 'public', name);
   if (name === 'styles.css') {
     write(name, readFileSync(path, 'utf8').replace('url("/tokens.css")', 'url("/poppy/tokens.css")') +
-      '\n#status { margin-block: 0.7rem; }\n.guide { white-space: pre-wrap; overflow-wrap: anywhere; }\n');
+      '\n#status { margin-block: 0.7rem; }\n');
   } else copyFileSync(path, join(site, name));
 }
 execFileSync('tar', ['-czf', join(site, 'source.tar.gz'), '-C', repo,
