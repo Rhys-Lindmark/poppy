@@ -1,0 +1,10 @@
+{
+  "schema": "firedrill.native-persona.v1",
+  "name": "Demo Store customer",
+  "description": "A synthetic PoppyVal user with one seeded delivery.",
+  "goals": ["Understand the exact terms for moving the delivery from Friday to Saturday."],
+  "constraints": ["Use only the seeded demo account.", "Never share a real credential or make a purchase."],
+  "communication": "Use brief, direct requests. State the final decision clearly when asked.",
+  "initial_message": "Move my demo delivery to Saturday. Show me the exact terms first.",
+  "memory_facts": ["The order is demo-order.", "The original delivery day is Friday."]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "personal-agent-protocol-demo",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node src/demo.mjs",
+    "test": "node --test"
+  }
+}
